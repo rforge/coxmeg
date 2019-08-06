@@ -1,0 +1,16 @@
+Package: coxmeg
+Type: Package
+Title: Fit a Cox mixed-effects model with a relatedness matrix
+Version: 1.0.1
+Date: 2019-08-01
+Author: Liang He
+Maintainer: Liang He <liang.he@duke.edu>
+Description: Fast algorithms for fitting a Cox mixed-effects model for e.g., genome-wide association studies.
+License: GPL
+Imports: Rcpp (>= 0.12.18), RcppEigen (>= 0.3.3.4.0), nloptr, MASS, matrixcalc, SNPRelate, rARPACK, stats, Matrix, methods, utils
+LinkingTo: Rcpp, RcppEigen
+Depends: R (>= 3.4), Rcpp (>= 0.12.18)
+RoxygenNote: 6.1.1
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr
