@@ -115,12 +115,12 @@ ycen &lt;-<span class="st"> </span><span class="kw">pmin</span>(y, cen)
 outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span class="kw">as.numeric</span>(y <span class="op">&lt;=</span><span class="st"> </span>cen))
 <span class="kw">head</span>(outcome)</code></pre></div>
 <pre><code>##            ycen  
-## [1,] 0.88072332 1
-## [2,] 2.94948829 1
-## [3,] 0.06313429 1
-## [4,] 0.65272475 1
-## [5,] 3.86728686 1
-## [6,] 2.80333196 1</code></pre>
+## [1,] 2.56213360 1
+## [2,] 0.05195157 1
+## [3,] 2.89339398 1
+## [4,] 4.07430401 1
+## [5,] 4.27963111 1
+## [6,] 1.05271484 1</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sigma[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>,<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>]</code></pre></div>
 <pre><code>## 5 x 5 sparse Matrix of class &quot;dgCMatrix&quot;
 ##                         
@@ -136,25 +136,25 @@ outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span c
 ## [1] &quot;The relatedness matrix is treated as sparse.&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
 <pre><code>## $beta
-##            [,1]
-## [1,] 0.09531838
+##           [,1]
+## [1,] 0.1217295
 ## 
 ## $HR
 ##          [,1]
-## [1,] 1.100009
+## [1,] 1.129449
 ## 
 ## $sd_beta
-## [1] 0.03716186
+## [1] 0.03760357
 ## 
 ## $p
 ##            [,1]
-## [1,] 0.01031902
+## [1,] 0.00120717
 ## 
 ## $tau
-## [1] 0.1956925
+## [1] 0.1826028
 ## 
 ## $iter
-## [1] 19
+## [1] 16
 ## 
 ## $rank
 ## [1] 1000
@@ -163,10 +163,9 @@ outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span c
 ## [1] 1000
 ## 
 ## $int_ll
-## [1] 11483</code></pre>
-<p>In the result, <code>coxmeg</code> is estimated variance component. We compare the results with coxme. The integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used.</p>
+## [1] 11514.34</code></pre>
+<p>In the above result, <code>tau</code> is the estimated variance component, and <code>int_ll</code> is -2*log(lik) of the integrated/marginal likelihood of tau.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxme)</code></pre></div>
-<pre><code>## Warning: package 'coxme' was built under R version 3.5.3</code></pre>
 <pre><code>## Loading required package: survival</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">bls &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>)
 <span class="cf">for</span>(i <span class="cf">in</span> (size[<span class="dv">1</span>]<span class="op">-</span><span class="dv">1</span>)<span class="op">:</span><span class="dv">1</span>)
@@ -176,23 +175,173 @@ re_coxme =<span class="st"> </span><span class="kw">coxme</span>(<span class="kw
 re_coxme</code></pre></div>
 <pre><code>## Cox mixed-effects model fit by maximum likelihood
 ## 
-##   events, n = 942, 1000
-##   Iterations= 13 58 
+##   events, n = 947, 1000
+##   Iterations= 23 98 
 ##                     NULL Integrated    Fitted
-## Log-likelihood -5582.929  -5574.005 -5432.838
+## Log-likelihood -5600.724  -5589.677 -5455.716
 ## 
-##                    Chisq     df          p   AIC     BIC
-## Integrated loglik  17.85   2.00 1.3319e-04 13.85    4.15
-##  Penalized loglik 300.18 129.85 1.6653e-15 40.48 -589.05
+##                    Chisq    df          p   AIC     BIC
+## Integrated loglik  22.09   2.0 1.5933e-05 18.09    8.39
+##  Penalized loglik 290.02 123.7 2.2204e-15 42.61 -557.76
 ## 
 ## Model:  Surv(outcome[, 1], outcome[, 2]) ~ as.matrix(pred) + (1 | as.character(1:n)) 
 ## Fixed coefficients
-##                       coef exp(coef)   se(coef)    z    p
-## as.matrix(pred) 0.09536137  1.100056 0.03719588 2.56 0.01
+##                      coef exp(coef)   se(coef)    z      p
+## as.matrix(pred) 0.1217893  1.129516 0.03763537 3.24 0.0012
 ## 
 ## Random effects
 ##  Group             Variable Std Dev   Variance 
-##  as.character.1.n. Vmat.1   0.4443641 0.1974595</code></pre>
+##  as.character.1.n. Vmat.1   0.4294163 0.1843984</code></pre>
+<p>We compare the results with coxme. The integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used.</p>
+</div>
+<div id="perform-gwas-of-an-age-at-onset-phenotype" class="section level2">
+<h2>Perform GWAS of an age-at-onset phenotype</h2>
+<p>We illustrate how to perform a GWAS using the <code>coxmeg_plink</code> function. This function supports plink bed files. We provide example files in the package. The example plink files include 20 SNPs and 3000 subjects from 600 families. The following code performs a GWAS for all SNPs in the example bed files.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxmeg)
+bed =<span class="st"> </span><span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;example_null.bed&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;coxmeg&quot;</span>)
+bed =<span class="st"> </span><span class="kw">substr</span>(bed,<span class="dv">1</span>,<span class="kw">nchar</span>(bed)<span class="op">-</span><span class="dv">4</span>)
+pheno =<span class="st"> </span><span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;ex_pheno.txt&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;coxmeg&quot;</span>)
+cov =<span class="st"> </span><span class="kw">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;ex_cov.txt&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;coxmeg&quot;</span>)
+
+## building a relatedness matrix
+n_f &lt;-<span class="st"> </span><span class="dv">600</span>
+mat_list &lt;-<span class="st"> </span><span class="kw">list</span>()
+size &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">5</span>,n_f)
+offd &lt;-<span class="st"> </span><span class="fl">0.5</span>
+<span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>n_f)
+{
+  mat_list[[i]] &lt;-<span class="st"> </span><span class="kw">matrix</span>(offd,size[i],size[i])
+  <span class="kw">diag</span>(mat_list[[i]]) &lt;-<span class="st"> </span><span class="dv">1</span>
+}
+sigma &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">bdiag</span>(mat_list))
+
+re =<span class="st"> </span><span class="kw">coxmeg_plink</span>(pheno,sigma,bed,<span class="dt">cov=</span>cov,<span class="dt">detap=</span><span class="ot">TRUE</span>,<span class="dt">dense=</span><span class="ot">FALSE</span>,<span class="dt">verbose=</span><span class="ot">FALSE</span>)</code></pre></div>
+<pre><code>## Excluding 0 SNP on non-autosomes
+## Excluding 0 SNP (monomorphic: TRUE, MAF: 0.05, missing rate: 0)</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
+<pre><code>## $summary
+##     snp.id chromosome position allele      afreq   index         beta
+## 1   null_0          1        1    d/D 0.30983333  null_0  0.015672101
+## 2   null_1          1        2    d/D 0.23466667  null_1  0.019439150
+## 3   null_2          1        3    D/d 0.14033333  null_2 -0.049845757
+## 4   null_3          1        4    D/d 0.16183333  null_3  0.044130767
+## 5   null_4          1        5    d/D 0.19933333  null_4  0.028473176
+## 6   null_5          1        6    D/d 0.11800000  null_5 -0.114319159
+## 7   null_6          1        7    d/D 0.09483333  null_6 -0.017981231
+## 8   null_7          1        8    D/d 0.49683333  null_7 -0.004207897
+## 9   null_8          1        9    d/D 0.31366667  null_8 -0.063741849
+## 10  null_9          1       10    D/d 0.49183333  null_9 -0.008409562
+## 11 null_10          1       11    d/D 0.34833333 null_10 -0.013581479
+## 12 null_11          1       12    D/d 0.25100000 null_11  0.037508301
+## 13 null_12          1       13    d/D 0.17500000 null_12 -0.017215848
+## 14 null_13          1       14    D/d 0.06333333 null_13 -0.068207724
+## 15 null_14          1       15    D/d 0.20833333 null_14 -0.013965386
+## 16 null_15          1       16    d/D 0.17050000 null_15  0.002172773
+## 17 null_16          1       17    D/d 0.33550000 null_16  0.004762350
+## 18 null_17          1       18    d/D 0.26633333 null_17  0.001786995
+## 19 null_18          1       19    D/d 0.09433333 null_18 -0.016052310
+## 20 null_19          1       20    d/D 0.11650000 null_19 -0.022398126
+##           HR    sd_beta           p
+## 1  1.0157956 0.02938524 0.593803537
+## 2  1.0196293 0.03222054 0.546298835
+## 3  0.9513762 0.03860368 0.196628160
+## 4  1.0451190 0.03701019 0.233106387
+## 5  1.0288824 0.03432500 0.406811816
+## 6  0.8919732 0.04234095 0.006934636
+## 7  0.9821795 0.04655562 0.699325464
+## 8  0.9958009 0.02717805 0.876957699
+## 9  0.9382472 0.02958441 0.031195036
+## 10 0.9916257 0.02730686 0.758108827
+## 11 0.9865103 0.02859980 0.634872392
+## 12 1.0382206 0.03113254 0.228282858
+## 13 0.9829315 0.03628637 0.635183349
+## 14 0.9340664 0.05698849 0.231357835
+## 15 0.9861317 0.03431600 0.684034201
+## 16 1.0021751 0.03685682 0.952990554
+## 17 1.0047737 0.02859957 0.867749134
+## 18 1.0017886 0.03098518 0.954009439
+## 19 0.9840758 0.04731969 0.734435643
+## 20 0.9778508 0.04231689 0.596600710
+## 
+## $tau
+## [1] 0.04028041
+## 
+## $rank
+## [1] 3000
+## 
+## $nsam
+## [1] 3000</code></pre>
+<p>The above code first retrieves the full path of the files. If the full path is not given, the function will search the current working directory. The file name for the bed file should not include the suffix (.bed). The phenotype and covariate files have the same format as used in plink, and the IDs must be consistent with the bed files. Specifically, the phenotype file should include four columns including family ID, individual ID, time, and status. The covariate file always starts with two columns, family ID and individual ID. Missing values in the phenotype and covariate files are denoted by -9 and NA, respectively. In the current version, the <code>coxmeg_plink</code> function does not impute genotypes itself, and only SNPs without missing values will be analyzed, so it will be better to use imputed genotype data.</p>
+<p>The <code>coxmeg_plink</code> function fist estimates the variance component with only the covariates, and then uses it to analyze each SNP after filtering. These two steps can be done separately as follows. The first command without bed only esitmates the variance component tau, and the second command uses the estimated tau to analyze the SNPs. The <code>coxmeg_plink</code> function will write a temporary .gds file for the SNPs in the same folder of the bed files. The temporary file is removed after the analysis is done.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re =<span class="st"> </span><span class="kw">coxmeg_plink</span>(pheno,sigma,<span class="dt">cov=</span>cov,<span class="dt">detap=</span><span class="ot">TRUE</span>,<span class="dt">dense=</span><span class="ot">FALSE</span>,<span class="dt">verbose=</span><span class="ot">FALSE</span>)
+re</code></pre></div>
+<pre><code>## $tau
+## [1] 0.04028041
+## 
+## $iter
+## [1] 15
+## 
+## $rank
+## [1] 3000
+## 
+## $nsam
+## [1] 3000</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re =<span class="st"> </span><span class="kw">coxmeg_plink</span>(pheno,sigma,bed,<span class="dt">tau=</span>re<span class="op">$</span>tau,<span class="dt">cov=</span>cov,<span class="dt">detap=</span><span class="ot">TRUE</span>,<span class="dt">dense=</span><span class="ot">FALSE</span>,<span class="dt">verbose=</span><span class="ot">FALSE</span>)</code></pre></div>
+<pre><code>## Excluding 0 SNP on non-autosomes
+## Excluding 0 SNP (monomorphic: TRUE, MAF: 0.05, missing rate: 0)</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
+<pre><code>## $summary
+##     snp.id chromosome position allele      afreq   index         beta
+## 1   null_0          1        1    d/D 0.30983333  null_0  0.015672101
+## 2   null_1          1        2    d/D 0.23466667  null_1  0.019439150
+## 3   null_2          1        3    D/d 0.14033333  null_2 -0.049845757
+## 4   null_3          1        4    D/d 0.16183333  null_3  0.044130767
+## 5   null_4          1        5    d/D 0.19933333  null_4  0.028473176
+## 6   null_5          1        6    D/d 0.11800000  null_5 -0.114319159
+## 7   null_6          1        7    d/D 0.09483333  null_6 -0.017981231
+## 8   null_7          1        8    D/d 0.49683333  null_7 -0.004207897
+## 9   null_8          1        9    d/D 0.31366667  null_8 -0.063741849
+## 10  null_9          1       10    D/d 0.49183333  null_9 -0.008409562
+## 11 null_10          1       11    d/D 0.34833333 null_10 -0.013581479
+## 12 null_11          1       12    D/d 0.25100000 null_11  0.037508301
+## 13 null_12          1       13    d/D 0.17500000 null_12 -0.017215848
+## 14 null_13          1       14    D/d 0.06333333 null_13 -0.068207724
+## 15 null_14          1       15    D/d 0.20833333 null_14 -0.013965386
+## 16 null_15          1       16    d/D 0.17050000 null_15  0.002172773
+## 17 null_16          1       17    D/d 0.33550000 null_16  0.004762350
+## 18 null_17          1       18    d/D 0.26633333 null_17  0.001786995
+## 19 null_18          1       19    D/d 0.09433333 null_18 -0.016052310
+## 20 null_19          1       20    d/D 0.11650000 null_19 -0.022398126
+##           HR    sd_beta           p
+## 1  1.0157956 0.02938524 0.593803537
+## 2  1.0196293 0.03222054 0.546298835
+## 3  0.9513762 0.03860368 0.196628160
+## 4  1.0451190 0.03701019 0.233106387
+## 5  1.0288824 0.03432500 0.406811816
+## 6  0.8919732 0.04234095 0.006934636
+## 7  0.9821795 0.04655562 0.699325464
+## 8  0.9958009 0.02717805 0.876957699
+## 9  0.9382472 0.02958441 0.031195036
+## 10 0.9916257 0.02730686 0.758108827
+## 11 0.9865103 0.02859980 0.634872392
+## 12 1.0382206 0.03113254 0.228282858
+## 13 0.9829315 0.03628637 0.635183349
+## 14 0.9340664 0.05698849 0.231357835
+## 15 0.9861317 0.03431600 0.684034201
+## 16 1.0021751 0.03685682 0.952990554
+## 17 1.0047737 0.02859957 0.867749134
+## 18 1.0017886 0.03098518 0.954009439
+## 19 0.9840758 0.04731969 0.734435643
+## 20 0.9778508 0.04231689 0.596600710
+## 
+## $tau
+## [1] 0.04028041
+## 
+## $rank
+## [1] 3000
+## 
+## $nsam
+## [1] 3000</code></pre>
 </div>
 
 

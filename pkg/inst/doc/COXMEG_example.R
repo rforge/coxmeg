@@ -52,3 +52,31 @@ tmat <- bdsmatrix(blocksize=size, blocks=rep(bls,n_f),dimnames=list(as.character
 re_coxme = coxme(Surv(outcome[,1],outcome[,2])~as.matrix(pred)+(1|as.character(1:n)), varlist=list(tmat),ties='breslow')
 re_coxme
 
+## ----echo=TRUE-----------------------------------------------------------
+library(coxmeg)
+bed = system.file("extdata", "example_null.bed", package = "coxmeg")
+bed = substr(bed,1,nchar(bed)-4)
+pheno = system.file("extdata", "ex_pheno.txt", package = "coxmeg")
+cov = system.file("extdata", "ex_cov.txt", package = "coxmeg")
+
+## building a relatedness matrix
+n_f <- 600
+mat_list <- list()
+size <- rep(5,n_f)
+offd <- 0.5
+for(i in 1:n_f)
+{
+  mat_list[[i]] <- matrix(offd,size[i],size[i])
+  diag(mat_list[[i]]) <- 1
+}
+sigma <- as.matrix(bdiag(mat_list))
+
+re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re
+
+## ----echo=TRUE-----------------------------------------------------------
+re = coxmeg_plink(pheno,sigma,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re
+re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re
+
