@@ -31,13 +31,13 @@ install.packages("coxmeg", repos="http://R-Forge.R-project.org")
 
 ## Fit a Cox mixed-effects model with a sparse relatedness matrix
 
-We illustrate how to use coxmeg to fit a Cox mixed-effects model with a sparse relatedness matrix. We first simulate a block-diagonal relatedness matrix for a cohort consisting of 600 families, each of which has five members.
+We illustrate how to use coxmeg to fit a Cox mixed-effects model with a sparse relatedness matrix. We first simulate a block-diagonal relatedness matrix for a cohort consisting of 200 families, each of which has five members.
 
 ```{r,echo=TRUE}
 library(coxmeg)
 library(MASS)
 library(Matrix)
-n_f <- 600
+n_f <- 200
 mat_list <- list()
 size <- rep(5,n_f)
 offd <- 0.5
@@ -48,6 +48,7 @@ for(i in 1:n_f)
 }
 sigma <- as.matrix(bdiag(mat_list))
 sigma = as(sigma,'dgCMatrix')
+
 ```
 
 We use 'dgCMatrix' to save memory. Next, we simulate random effects and time-to-event outcomes assuming a constant baseline hazard function. We assume that the variance component is 0.2. We also simulate a risk factor with log(HR)=0.1. 
@@ -62,12 +63,28 @@ y <- rexp(n, rate = myrates)
 cen <- rexp(n, rate = 0.02 )
 ycen <- pmin(y, cen)
 outcome <- cbind(ycen,as.numeric(y <= cen))
+head(outcome)
+sigma[1:5,1:5]
+
 ```
 
-We fit a Cox mixed-effects model using the ```coxmeg``` function. We set ```dense=FALSE``` to indicate that the relatedness matrix is sparse. However, the function will automatically treat it as dense if there are more than 50% non-zero elements in the matrix.  
+We fit a Cox mixed-effects model using the ```coxmeg``` function. We set ```dense=FALSE``` to indicate that the relatedness matrix is sparse. However, the function will automatically treat it as dense if there are more than 50% non-zero elements in the matrix. We set ```order=1``` to use the first-order approximation of the inverse Hessian matrix in the optimization.  
 
 ```{r,echo=TRUE}
-re = coxmeg(outcome,sigma,pred,order=1,eigen=TRUE,dense=FALSE)
+re = coxmeg(outcome,sigma,pred,order=1,dense=FALSE)
 re
 ```
+
+In the result, ```coxmeg``` is estimated variance component. We compare the results with coxme. The integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used.   
+
+```{r,echo=TRUE}
+library(coxme)
+bls <- c(1)
+for(i in (size[1]-1):1)
+{bls <- c(bls, c(rep(offd,i),1))}
+tmat <- bdsmatrix(blocksize=size, blocks=rep(bls,n_f),dimnames=list(as.character(1:n),as.character(1:n)))
+re_coxme = coxme(Surv(outcome[,1],outcome[,2])~as.matrix(pred)+(1|as.character(1:n)), varlist=list(tmat),ties='breslow')
+re_coxme
+```
+
 

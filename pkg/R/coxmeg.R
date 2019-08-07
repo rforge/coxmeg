@@ -31,7 +31,7 @@
 #' @return sd_beta: The estimated standard error of beta.
 #' @return iter: The number of iterations until convergence.
 #' @return tau: The estimated variance component.
-#' @return int_ll: The marginal likelihood of tau evaluated at the estimate of tau.
+#' @return int_ll: The marginal likelihood (-2*log(lik)) of tau evaluated at the estimate of tau.
 #' @return rank: The rank of the relatedness matrix.
 #' @return nsam: Actual sample size.
 #' @keywords Cox mixed-effects model

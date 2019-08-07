@@ -12,7 +12,7 @@
 
 <meta name="author" content="Liang He" />
 
-<meta name="date" content="2019-08-06" />
+<meta name="date" content="2019-08-07" />
 
 <title>Cox mixed-effects models for genome-wide association analysis</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Cox mixed-effects models for genome-wide association analysis</h1>
 <h4 class="author"><em>Liang He</em></h4>
-<h4 class="date"><em>2019-08-06</em></h4>
+<h4 class="date"><em>2019-08-07</em></h4>
 
 
 
@@ -87,12 +87,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </div>
 <div id="fit-a-cox-mixed-effects-model-with-a-sparse-relatedness-matrix" class="section level2">
 <h2>Fit a Cox mixed-effects model with a sparse relatedness matrix</h2>
-<p>We illustrate how to use coxmeg to fit a Cox mixed-effects model with a sparse relatedness matrix. We first simulate a block-diagonal relatedness matrix for a cohort consisting of 600 families, each of which has five members.</p>
+<p>We illustrate how to use coxmeg to fit a Cox mixed-effects model with a sparse relatedness matrix. We first simulate a block-diagonal relatedness matrix for a cohort consisting of 200 families, each of which has five members.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxmeg)</code></pre></div>
 <pre><code>## Loading required package: Rcpp</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(MASS)
 <span class="kw">library</span>(Matrix)
-n_f &lt;-<span class="st"> </span><span class="dv">600</span>
+n_f &lt;-<span class="st"> </span><span class="dv">200</span>
 mat_list &lt;-<span class="st"> </span><span class="kw">list</span>()
 size &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">5</span>,n_f)
 offd &lt;-<span class="st"> </span><span class="fl">0.5</span>
@@ -112,42 +112,87 @@ myrates &lt;-<span class="st"> </span><span class="kw">exp</span>(x<span class="
 y &lt;-<span class="st"> </span><span class="kw">rexp</span>(n, <span class="dt">rate =</span> myrates)
 cen &lt;-<span class="st"> </span><span class="kw">rexp</span>(n, <span class="dt">rate =</span> <span class="fl">0.02</span> )
 ycen &lt;-<span class="st"> </span><span class="kw">pmin</span>(y, cen)
-outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span class="kw">as.numeric</span>(y <span class="op">&lt;=</span><span class="st"> </span>cen))</code></pre></div>
-<p>We fit a Cox mixed-effects model using the <code>coxmeg</code> function. We set <code>dense=FALSE</code> to indicate that the relatedness matrix is sparse. However, the function will automatically treat it as dense if there are more than 50% non-zero elements in the matrix.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re =<span class="st"> </span><span class="kw">coxmeg</span>(outcome,sigma,pred,<span class="dt">order=</span><span class="dv">1</span>,<span class="dt">eigen=</span><span class="ot">TRUE</span>,<span class="dt">dense=</span><span class="ot">FALSE</span>)</code></pre></div>
-<pre><code>## [1] &quot;Remove 0 early censored samples.&quot;
-## [1] &quot;The sample size included is 3000. The rank of the relatedness matrix is 3000&quot;
+outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span class="kw">as.numeric</span>(y <span class="op">&lt;=</span><span class="st"> </span>cen))
+<span class="kw">head</span>(outcome)</code></pre></div>
+<pre><code>##            ycen  
+## [1,] 0.88072332 1
+## [2,] 2.94948829 1
+## [3,] 0.06313429 1
+## [4,] 0.65272475 1
+## [5,] 3.86728686 1
+## [6,] 2.80333196 1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sigma[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>,<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>]</code></pre></div>
+<pre><code>## 5 x 5 sparse Matrix of class &quot;dgCMatrix&quot;
+##                         
+## [1,] 1.0 0.5 0.5 0.5 0.5
+## [2,] 0.5 1.0 0.5 0.5 0.5
+## [3,] 0.5 0.5 1.0 0.5 0.5
+## [4,] 0.5 0.5 0.5 1.0 0.5
+## [5,] 0.5 0.5 0.5 0.5 1.0</code></pre>
+<p>We fit a Cox mixed-effects model using the <code>coxmeg</code> function. We set <code>dense=FALSE</code> to indicate that the relatedness matrix is sparse. However, the function will automatically treat it as dense if there are more than 50% non-zero elements in the matrix. We set <code>order=1</code> to use the first-order approximation of the inverse Hessian matrix in the optimization.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re =<span class="st"> </span><span class="kw">coxmeg</span>(outcome,sigma,pred,<span class="dt">order=</span><span class="dv">1</span>,<span class="dt">dense=</span><span class="ot">FALSE</span>)</code></pre></div>
+<pre><code>## [1] &quot;Remove 0 subjects censored before the first failure.&quot;
+## [1] &quot;The sample size included is 1000.&quot;
 ## [1] &quot;The relatedness matrix is treated as sparse.&quot;</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
 <pre><code>## $beta
-##           [,1]
-## [1,] 0.1044212
+##            [,1]
+## [1,] 0.09531838
 ## 
 ## $HR
 ##          [,1]
-## [1,] 1.110068
+## [1,] 1.100009
 ## 
 ## $sd_beta
-## [1] 0.02129185
+## [1] 0.03716186
 ## 
 ## $p
-##              [,1]
-## [1,] 9.377113e-07
+##            [,1]
+## [1,] 0.01031902
 ## 
 ## $tau
-## [1] 0.1631607
+## [1] 0.1956925
 ## 
 ## $iter
-## [1] 14
+## [1] 19
 ## 
 ## $rank
-## [1] 3000
+## [1] 1000
 ## 
 ## $nsam
-## [1] 3000
+## [1] 1000
 ## 
 ## $int_ll
-## [1] 40871.73</code></pre>
+## [1] 11483</code></pre>
+<p>In the result, <code>coxmeg</code> is estimated variance component. We compare the results with coxme. The integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxme)</code></pre></div>
+<pre><code>## Warning: package 'coxme' was built under R version 3.5.3</code></pre>
+<pre><code>## Loading required package: survival</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">bls &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>)
+<span class="cf">for</span>(i <span class="cf">in</span> (size[<span class="dv">1</span>]<span class="op">-</span><span class="dv">1</span>)<span class="op">:</span><span class="dv">1</span>)
+{bls &lt;-<span class="st"> </span><span class="kw">c</span>(bls, <span class="kw">c</span>(<span class="kw">rep</span>(offd,i),<span class="dv">1</span>))}
+tmat &lt;-<span class="st"> </span><span class="kw">bdsmatrix</span>(<span class="dt">blocksize=</span>size, <span class="dt">blocks=</span><span class="kw">rep</span>(bls,n_f),<span class="dt">dimnames=</span><span class="kw">list</span>(<span class="kw">as.character</span>(<span class="dv">1</span><span class="op">:</span>n),<span class="kw">as.character</span>(<span class="dv">1</span><span class="op">:</span>n)))
+re_coxme =<span class="st"> </span><span class="kw">coxme</span>(<span class="kw">Surv</span>(outcome[,<span class="dv">1</span>],outcome[,<span class="dv">2</span>])<span class="op">~</span><span class="kw">as.matrix</span>(pred)<span class="op">+</span>(<span class="dv">1</span><span class="op">|</span><span class="kw">as.character</span>(<span class="dv">1</span><span class="op">:</span>n)), <span class="dt">varlist=</span><span class="kw">list</span>(tmat),<span class="dt">ties=</span><span class="st">'breslow'</span>)
+re_coxme</code></pre></div>
+<pre><code>## Cox mixed-effects model fit by maximum likelihood
+## 
+##   events, n = 942, 1000
+##   Iterations= 13 58 
+##                     NULL Integrated    Fitted
+## Log-likelihood -5582.929  -5574.005 -5432.838
+## 
+##                    Chisq     df          p   AIC     BIC
+## Integrated loglik  17.85   2.00 1.3319e-04 13.85    4.15
+##  Penalized loglik 300.18 129.85 1.6653e-15 40.48 -589.05
+## 
+## Model:  Surv(outcome[, 1], outcome[, 2]) ~ as.matrix(pred) + (1 | as.character(1:n)) 
+## Fixed coefficients
+##                       coef exp(coef)   se(coef)    z    p
+## as.matrix(pred) 0.09536137  1.100056 0.03719588 2.56 0.01
+## 
+## Random effects
+##  Group             Variable Std Dev   Variance 
+##  as.character.1.n. Vmat.1   0.4443641 0.1974595</code></pre>
 </div>
 
 

@@ -55,7 +55,7 @@ iter: The number of iterations until convergence.
 
 tau: The estimated variance component.
 
-int_ll: The marginal likelihood of tau evaluated at the estimate of tau.
+int_ll: The marginal likelihood (-2*log(lik)) of tau evaluated at the estimate of tau.
 
 rank: The rank of the relatedness matrix.
 

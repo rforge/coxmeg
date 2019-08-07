@@ -86,11 +86,10 @@ Rcpp::List invsph(Eigen::SparseMatrix<double> & A, const Eigen::VectorXd & der, 
   }
   
   SpMat A_bk;
-  if(inv(0)==0)
-    A_bk = A;
+  A_bk = A;
     
-  for (int k=0; k<A.outerSize(); ++k)
-    for (SpMat::InnerIterator it(A,k); it; ++it)
+  for (int k=0; k<A_bk.outerSize(); ++k)
+    for (SpMat::InnerIterator it(A_bk,k); it; ++it)
     {
       if(it.row()==it.col())
       {
@@ -104,11 +103,11 @@ Rcpp::List invsph(Eigen::SparseMatrix<double> & A, const Eigen::VectorXd & der, 
   Eigen::MatrixXd wb_sig_i_hx_der;
   if(sol<2)
   {
-    solver_ch.compute(A);
+    solver_ch.compute(A_bk);
     wb_sig_i_hx_der = solver_ch.solve(B);
   }else{
     solver_cg.setTolerance(tol);
-    solver_cg.compute(A);
+    solver_cg.compute(A_bk);
     wb_sig_i_hx_der = solver_cg.solve(B);
   }
   
@@ -151,19 +150,7 @@ Rcpp::List invsph(Eigen::SparseMatrix<double> & A, const Eigen::VectorXd & der, 
       
       if(inv(0)==0)
       {
-        /*
-        for (int k=0; k<A.outerSize(); ++k)
-          for (SpMat::InnerIterator it(A,k); it; ++it)
-          {
-            if(it.row()==it.col())
-            {
-              it.valueRef() = dv(it.row());
-              break;
-            }
-          }
-          w_v_x = A*w_v_x;
-         */
-        w_v_x = A_bk*w_v_x;
+        w_v_x = A*w_v_x;
       }
       if(sol<2)
       {
