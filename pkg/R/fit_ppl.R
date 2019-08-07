@@ -5,6 +5,9 @@
 #' 
 #' @section About \code{solver}:
 #' When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. 
+#' @section About \code{invchol}:
+#' Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used. 
+#' 
 #' @param tau A positive scalar. A variance component given by the user. Default is 0.5.
 #' @param X A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.
 #' @param outcome A matrix contains time (first column) and status (second column). The status is a binary variable (1 for failure / 0 for censored).
@@ -84,7 +87,7 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
   }
   
   if(verbose==TRUE)
-  {print(paste0('Remove ', length(rem), ' early censored samples.'))}
+  {print(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
   
   n <- nrow(outcome)
   k <- ncol(X)
@@ -115,13 +118,15 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
     spsd = FALSE
     if(rk_cor<n)
     {spsd = TRUE}
+    if(verbose==TRUE)
+    {print(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
+    
   }else{
     spsd = FALSE
     rk_cor = n
+    if(verbose==TRUE)
+    {print(paste0('The sample size included is ',n,'.'))}
   }
-  
-  if(verbose==TRUE)
-  {print(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
   
   nz <- nnzero(corr)
   if(nz>(n*n/2))

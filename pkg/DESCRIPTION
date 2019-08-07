@@ -1,7 +1,7 @@
 Package: coxmeg
 Type: Package
 Title: Fit a Cox mixed-effects model with a relatedness matrix
-Version: 1.0.2
+Version: 1.0.3
 Date: 2019-08-01
 Author: Liang He
 Maintainer: Liang He <liang.he@duke.edu>

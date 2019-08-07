@@ -54,6 +54,11 @@ ppl: The PPL when the convergence is reached.
 When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}.
 }
 
+\section{About \code{invchol}}{
+
+Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used.
+}
+
 \examples{
 library(Matrix)
 library(MASS)

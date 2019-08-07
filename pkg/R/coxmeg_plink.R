@@ -13,6 +13,9 @@
 #' When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, set \code{spd=FALSE}. 
 #' @section About \code{solver}:
 #' When \code{solver=1} (\code{solver=2}), Cholesky decompositon (PCG) is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
+#' @section About \code{invchol}:
+#' Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used. 
+#' 
 #' @param pheno A string value indicating the file name or the full path of a pheno file. The files must be in the working directory if the full path is not given. The file is in plink pheno format, containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
 #' @param bed A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.
@@ -138,6 +141,9 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     {cov <- as.matrix(cov[-rem,,drop = FALSE])}
   }
   
+  if(verbose==TRUE)
+  {print(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
+  
   n <- nrow(outcome)
   u <- rep(0,n)
   if(is.null(cov)==FALSE)
@@ -174,13 +180,14 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     spsd = FALSE
     if(rk_cor<n)
     {spsd = TRUE}
+    if(verbose==TRUE)
+    {print(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
   }else{
     spsd = FALSE
     rk_cor = n
+    if(verbose==TRUE)
+    {print(paste0('The sample size included is ',n,'.'))}
   }
-  
-  if(verbose==TRUE)
-  {print(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
   
   nz <- nnzero(corr)
   if(nz>(n*n/2))

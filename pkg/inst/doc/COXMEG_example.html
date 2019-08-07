@@ -85,6 +85,70 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">&quot;coxmeg&quot;</span>, <span class="dt">repos=</span><span class="st">&quot;http://R-Forge.R-project.org&quot;</span>)</code></pre></div>
 </div>
 </div>
+<div id="fit-a-cox-mixed-effects-model-with-a-sparse-relatedness-matrix" class="section level2">
+<h2>Fit a Cox mixed-effects model with a sparse relatedness matrix</h2>
+<p>We illustrate how to use coxmeg to fit a Cox mixed-effects model with a sparse relatedness matrix. We first simulate a block-diagonal relatedness matrix for a cohort consisting of 600 families, each of which has five members.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxmeg)</code></pre></div>
+<pre><code>## Loading required package: Rcpp</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(MASS)
+<span class="kw">library</span>(Matrix)
+n_f &lt;-<span class="st"> </span><span class="dv">600</span>
+mat_list &lt;-<span class="st"> </span><span class="kw">list</span>()
+size &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">5</span>,n_f)
+offd &lt;-<span class="st"> </span><span class="fl">0.5</span>
+<span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>n_f)
+{
+  mat_list[[i]] &lt;-<span class="st"> </span><span class="kw">matrix</span>(offd,size[i],size[i])
+  <span class="kw">diag</span>(mat_list[[i]]) &lt;-<span class="st"> </span><span class="dv">1</span>
+}
+sigma &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">bdiag</span>(mat_list))
+sigma =<span class="st"> </span><span class="kw">as</span>(sigma,<span class="st">'dgCMatrix'</span>)</code></pre></div>
+<p>We use ‘dgCMatrix’ to save memory. Next, we simulate random effects and time-to-event outcomes assuming a constant baseline hazard function. We assume that the variance component is 0.2. We also simulate a risk factor with log(HR)=0.1.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">n =<span class="st"> </span><span class="kw">nrow</span>(sigma)
+tau_var &lt;-<span class="st"> </span><span class="fl">0.2</span>
+x &lt;-<span class="st"> </span><span class="kw">mvrnorm</span>(<span class="dv">1</span>, <span class="kw">rep</span>(<span class="dv">0</span>,n), tau_var<span class="op">*</span>sigma)
+pred =<span class="st"> </span><span class="kw">rnorm</span>(n,<span class="dv">0</span>,<span class="dv">1</span>)
+myrates &lt;-<span class="st"> </span><span class="kw">exp</span>(x<span class="op">+</span><span class="fl">0.1</span><span class="op">*</span>pred<span class="op">-</span><span class="dv">1</span>)
+y &lt;-<span class="st"> </span><span class="kw">rexp</span>(n, <span class="dt">rate =</span> myrates)
+cen &lt;-<span class="st"> </span><span class="kw">rexp</span>(n, <span class="dt">rate =</span> <span class="fl">0.02</span> )
+ycen &lt;-<span class="st"> </span><span class="kw">pmin</span>(y, cen)
+outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span class="kw">as.numeric</span>(y <span class="op">&lt;=</span><span class="st"> </span>cen))</code></pre></div>
+<p>We fit a Cox mixed-effects model using the <code>coxmeg</code> function. We set <code>dense=FALSE</code> to indicate that the relatedness matrix is sparse. However, the function will automatically treat it as dense if there are more than 50% non-zero elements in the matrix.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re =<span class="st"> </span><span class="kw">coxmeg</span>(outcome,sigma,pred,<span class="dt">order=</span><span class="dv">1</span>,<span class="dt">eigen=</span><span class="ot">TRUE</span>,<span class="dt">dense=</span><span class="ot">FALSE</span>)</code></pre></div>
+<pre><code>## [1] &quot;Remove 0 early censored samples.&quot;
+## [1] &quot;The sample size included is 3000. The rank of the relatedness matrix is 3000&quot;
+## [1] &quot;The relatedness matrix is treated as sparse.&quot;</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
+<pre><code>## $beta
+##           [,1]
+## [1,] 0.1044212
+## 
+## $HR
+##          [,1]
+## [1,] 1.110068
+## 
+## $sd_beta
+## [1] 0.02129185
+## 
+## $p
+##              [,1]
+## [1,] 9.377113e-07
+## 
+## $tau
+## [1] 0.1631607
+## 
+## $iter
+## [1] 14
+## 
+## $rank
+## [1] 3000
+## 
+## $nsam
+## [1] 3000
+## 
+## $int_ll
+## [1] 40871.73</code></pre>
+</div>
 
 
 
