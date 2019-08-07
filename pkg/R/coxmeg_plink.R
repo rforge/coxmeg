@@ -14,10 +14,10 @@
 #' @section About \code{solver}:
 #' When \code{solver=1} (\code{solver=2}), Cholesky decompositon (PCG) is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
 #' @param pheno A string value indicating the file name or the full path of a pheno file. The files must be in the working directory if the full path is not given. The file is in plink pheno format, containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).
-#' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package.
+#' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
 #' @param bed A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.
 #' @param tau An optional positive value for the variance component. If tau is given, the function will skip estimating the variance component, and use the given tau to analyze the SNPs.
-#' @param cov An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component.
+#' @param cov An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.
 #' @param eps An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.
 #' @param min_tau An optional positive value indicating the lower bound in the optimization algorithm for the variance component tau. Default is 1e-4.
 #' @param max_tau An optional positive value indicating the upper bound in the optimization algorithm for the variance component tau. Default is 5.
@@ -29,10 +29,11 @@
 #' @param maf An optional positive value. All SNPs with MAF<maf in the bed file will not be analyzed. Default is 0.05.
 #' @param score An optional logical value indicating whether to perform a score test. Default is FALSE.
 #' @param threshold An optional non-negative value. If threshold>0, coxmeg_m will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.
-#' @param order An optional integer value starting from 0. Only valid when dense=FALSE. It specifies the order of approximation used in the inexact newton method. Default is 1.
-#' @param eigen An optional logical value Only valid when dense=FALSE. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.
+#' @param order An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.
+#' @param eigen An optional logical value. Only valid when dense=FALSE. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.
 #' @param verbose An optional logical value indicating whether to print additional messages. Default is TRUE.
 #' @param mc An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.
+#' @param invchol An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.
 #' @return beta: The estimated coefficient for each predictor in X.
 #' @return HR: The estimated HR for each predictor in X.
 #' @return sd_beta: The estimated standard error of beta.
@@ -68,7 +69,7 @@
 #' re
 
 
-coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,score=FALSE,dense=FALSE,threshold=0,solver=1,spd=TRUE,mc=100,verbose=TRUE){
+coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,score=FALSE,dense=FALSE,threshold=0,solver=1,spd=TRUE,mc=100,verbose=TRUE,invchol=TRUE){
   
   if(eps<0)
   {eps <- 1e-6}
@@ -160,12 +161,12 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
   rs <- rs_sum(rk-1,d_v[ind[,1]])
   if(spd==FALSE)
   {
-    minei = eigs_sym(corr, 1, which = "SM")
-    if(minei$values < -1e-10)
-    {
-      stop(paste0("The relatedness matrix has negative eigenvalues (", minei$values,")."))
-    }
-    if(max(apply(corr,2,sum))<1e-10)
+    # minei = eigs_sym(corr, 1, which = "SM")
+    # if(minei$values < -1e-10)
+    # {
+    #   stop(paste0("The relatedness matrix has negative eigenvalues (", minei$values,")."))
+    # }
+    if(max(colSums(corr))<1e-10)
     {
       stop("The relatedness matrix has a zero eigenvalue with an eigenvector of 1s.")
     }
@@ -221,9 +222,18 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     
     if(spsd==FALSE)
     {
-      sigma_i_s <- Matrix::chol2inv(Matrix::chol(corr))
+      if(invchol==TRUE)
+      {
+        sigma_i_s <- Matrix::chol2inv(Matrix::chol(corr))
+      }else{
+        sigma_i_s <- Matrix::solve(corr)
+      }
     }else{
       sigma_i_s = eigen(corr)
+      if(min(sigma_i_s$values) < -1e-10)
+      {
+        stop("The relatedness matrix has negative eigenvalues.")
+      }
       sigma_i_s = sigma_i_s$vectors%*%(c(1/sigma_i_s$values[1:rk_cor],rep(0,n-rk_cor))*t(sigma_i_s$vectors))
     }
     

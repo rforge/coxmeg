@@ -4,12 +4,12 @@
 #' \code{coxmeg} returns estimates of the variance component, the HRs and p-values for the predictors.
 #' 
 #' @section About \code{spd}:
-#' When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, set \code{spd=FALSE}.
+#' When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, use \code{spd=FALSE}.
 #' @section About \code{solver}:
-#' \code{solver} When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance. 
+#' When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance. 
 #' @param outcome A matrix contains time (first column) and status (second column). The status is a binary variable (1 for events / 0 for censored).
-#' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' object in the Matrix package.
-#' @param X An optional matrix of the preidctors with fixed effects. Each row is a sample, and the predictors are columns. 
+#' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
+#' @param X An optional matrix of the preidctors with fixed effects. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns. 
 #' @param FID An optional string vector of family ID. If provided, the data will be reordered according to the family ID.
 #' @param eps An optional positive scalar indicating the tolerance in the optimization algorithm. Default is 1e-6.
 #' @param min_tau An optional positive scalar indicating the lower bound in the optimization algorithm for the variance component \code{tau}. Default is 1e-4.
@@ -20,9 +20,10 @@
 #' @param detap An optional logical scalar indicating whether to use approximation for log-determinant. Default is TRUE.
 #' @param solver An optional bianry scalar taking either 1 or 2. Default is 1. See details.
 #' @param order An optional integer scalar starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.
-#' @param eigen An optional logical scalar. Only valid when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.
+#' @param eigen An optional logical scalar. Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.
 #' @param verbose An optional logical scalar indicating whether to print additional messages. Default is TRUE.
 #' @param mc An optional integer scalar specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.
+#' @param invchol An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.
 #' @return beta: The estimated coefficient for each predictor in X.
 #' @return HR: The estimated HR for each predictor in X.
 #' @return sd_beta: The estimated standard error of beta.
@@ -61,10 +62,10 @@
 #' outcome <- cbind(ycen,as.numeric(y <= cen))
 #' 
 #' ## fit a Cox mixed-effects model
-#' re = coxmeg(outcome,sigma,x,order=1,eigen=TRUE,dense=FALSE)
+#' re = coxmeg(outcome,sigma,order=1,eigen=TRUE,dense=FALSE)
 #' re
 
-coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=5,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,dense=FALSE,solver=1,spd=TRUE,verbose=TRUE, mc=100){
+coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=5,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,dense=FALSE,solver=1,spd=TRUE,verbose=TRUE, mc=100,invchol=TRUE){
   
   if(eps<0)
   {eps <- 1e-6}
@@ -125,12 +126,12 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   rs <- rs_sum(rk-1,d_v[ind[,1]])
   if(spd==FALSE)
   {
-    minei = eigs_sym(corr, 1, which = "SM")
-    if(minei$values < -1e-10)
-    {
-      stop(paste0("The relatedness matrix has negative eigenvalues (", minei$values,")."))
-    }
-    if(max(apply(corr,2,sum))<1e-10)
+    # minei = eigs_sym(corr, 1, which = "SM")
+    # if(minei$values < -1e-10)
+    # {
+    #   stop(paste0("The relatedness matrix has negative eigenvalues (", minei$values,")."))
+    # }
+    if(max(colSums(corr))<1e-10)
     {
       stop("The relatedness matrix has a zero eigenvalue with an eigenvector of 1s.")
     }
@@ -189,9 +190,18 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
     
     if(spsd==FALSE)
     {
-      sigma_i_s <- Matrix::chol2inv(Matrix::chol(corr))
+      if(invchol==TRUE)
+      {
+        sigma_i_s <- Matrix::chol2inv(Matrix::chol(corr))
+      }else{
+        sigma_i_s <- Matrix::solve(corr)
+      }
     }else{
       sigma_i_s = eigen(corr)
+      if(min(sigma_i_s$values) < -1e-10)
+      {
+        stop("The relatedness matrix has negative eigenvalues.")
+      }
       sigma_i_s = sigma_i_s$vectors%*%(c(1/sigma_i_s$values[1:rk_cor],rep(0,n-rk_cor))*t(sigma_i_s$vectors))
     }
     

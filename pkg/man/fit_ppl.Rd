@@ -6,16 +6,16 @@
 \usage{
 fit_ppl(X, outcome, corr, tau = 0.5, FID = NULL, eps = 1e-06,
   order = 1, eigen = TRUE, dense = FALSE, solver = 1, spd = TRUE,
-  verbose = TRUE)
+  verbose = TRUE, invchol = TRUE)
 }
 \arguments{
-\item{X}{A matrix of the preidctors. Each row is a sample, and the predictors are columns.}
+\item{X}{A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
 
-\item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for events/0 for censored).}
+\item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for failure / 0 for censored).}
 
-\item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package.}
+\item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
 
-\item{tau}{a positive scalar. A user given variance component. Default is 0.5.}
+\item{tau}{A positive scalar. A variance component given by the user. Default is 0.5.}
 
 \item{FID}{An optional string vector of family ID. If provided, the data will be reordered according to the family ID.}
 
@@ -23,15 +23,17 @@ fit_ppl(X, outcome, corr, tau = 0.5, FID = NULL, eps = 1e-06,
 
 \item{order}{An optional integer value starting from 0. Only valid when dense=FALSE. It specifies the order of approximation used in the inexact newton method. Default is 1.}
 
-\item{eigen}{An optional logical value Only valid when dense=FALSE. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
+\item{eigen}{An optional logical value Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
 
 \item{dense}{An optional logical value indicating whether the relatedness matrix is dense. Default is FALSE.}
 
-\item{solver}{An optional bianry value taking either 1 or 2. Default is 1.}
+\item{solver}{An optional bianry value taking either 1 or 2. Default is 1. See details.}
 
 \item{spd}{An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE.}
 
 \item{verbose}{An optional logical value indicating whether to print additional messages. Default is TRUE.}
+
+\item{invchol}{An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.}
 }
 \value{
 beta: The estimated coefficient for each predictor in X.
@@ -47,9 +49,11 @@ ppl: The PPL when the convergence is reached.
 \description{
 \code{fit_ppl} returns estimates of HRs and their p-values given a known variance component (tau).
 }
-\details{
-\code{solver} When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}.
+\section{About \code{solver}}{
+
+When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}.
 }
+
 \examples{
 library(Matrix)
 library(MASS)

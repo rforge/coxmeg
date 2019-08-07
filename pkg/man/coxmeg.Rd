@@ -7,14 +7,14 @@
 coxmeg(outcome, corr, X = NULL, FID = NULL, eps = 1e-06,
   min_tau = 1e-04, max_tau = 5, order = 1, detap = TRUE,
   opt = "bobyqa", eigen = TRUE, dense = FALSE, solver = 1,
-  spd = TRUE, verbose = TRUE, mc = 100)
+  spd = TRUE, verbose = TRUE, mc = 100, invchol = TRUE)
 }
 \arguments{
 \item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for events / 0 for censored).}
 
-\item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' object in the Matrix package.}
+\item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
 
-\item{X}{An optional matrix of the preidctors with fixed effects. Each row is a sample, and the predictors are columns.}
+\item{X}{An optional matrix of the preidctors with fixed effects. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
 
 \item{FID}{An optional string vector of family ID. If provided, the data will be reordered according to the family ID.}
 
@@ -30,7 +30,7 @@ coxmeg(outcome, corr, X = NULL, FID = NULL, eps = 1e-06,
 
 \item{opt}{An optional logical scalar for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.}
 
-\item{eigen}{An optional logical scalar. Only valid when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
+\item{eigen}{An optional logical scalar. Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
 
 \item{dense}{An optional logical scalar indicating whether the relatedness matrix is dense. Default is FALSE.}
 
@@ -41,6 +41,8 @@ coxmeg(outcome, corr, X = NULL, FID = NULL, eps = 1e-06,
 \item{verbose}{An optional logical scalar indicating whether to print additional messages. Default is TRUE.}
 
 \item{mc}{An optional integer scalar specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.}
+
+\item{invchol}{An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.}
 }
 \value{
 beta: The estimated coefficient for each predictor in X.
@@ -64,12 +66,12 @@ nsam: Actual sample size.
 }
 \section{About \code{spd}}{
 
-When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, set \code{spd=FALSE}.
+When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, use \code{spd=FALSE}.
 }
 
 \section{About \code{solver}}{
 
-\code{solver} When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
+When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
 }
 
 \examples{
@@ -100,7 +102,7 @@ ycen <- pmin(y, cen)
 outcome <- cbind(ycen,as.numeric(y <= cen))
 
 ## fit a Cox mixed-effects model
-re = coxmeg(outcome,sigma,x,order=1,eigen=TRUE,dense=FALSE)
+re = coxmeg(outcome,sigma,order=1,eigen=TRUE,dense=FALSE)
 re
 }
 \keyword{Cox}

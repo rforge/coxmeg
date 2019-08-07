@@ -8,16 +8,16 @@ coxmeg_plink(pheno, corr, bed = NULL, cov = NULL, tau = NULL,
   maf = 0.05, min_tau = 1e-04, max_tau = 5, eps = 1e-06,
   order = 1, detap = TRUE, opt = "bobyqa", eigen = TRUE,
   score = FALSE, dense = FALSE, threshold = 0, solver = 1,
-  spd = TRUE, mc = 100, verbose = TRUE)
+  spd = TRUE, mc = 100, verbose = TRUE, invchol = TRUE)
 }
 \arguments{
 \item{pheno}{A string value indicating the file name or the full path of a pheno file. The files must be in the working directory if the full path is not given. The file is in plink pheno format, containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).}
 
-\item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package.}
+\item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
 
 \item{bed}{A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.}
 
-\item{cov}{An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component.}
+\item{cov}{An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.}
 
 \item{tau}{An optional positive value for the variance component. If tau is given, the function will skip estimating the variance component, and use the given tau to analyze the SNPs.}
 
@@ -29,13 +29,13 @@ coxmeg_plink(pheno, corr, bed = NULL, cov = NULL, tau = NULL,
 
 \item{eps}{An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.}
 
-\item{order}{An optional integer value starting from 0. Only valid when dense=FALSE. It specifies the order of approximation used in the inexact newton method. Default is 1.}
+\item{order}{An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.}
 
 \item{detap}{An optional logical value indicating whether to use approximation for log-determinant. Default is TRUE.}
 
 \item{opt}{An optional string value for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.}
 
-\item{eigen}{An optional logical value Only valid when dense=FALSE. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
+\item{eigen}{An optional logical value. Only valid when dense=FALSE. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
 
 \item{score}{An optional logical value indicating whether to perform a score test. Default is FALSE.}
 
@@ -50,6 +50,8 @@ coxmeg_plink(pheno, corr, bed = NULL, cov = NULL, tau = NULL,
 \item{mc}{An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.}
 
 \item{verbose}{An optional logical value indicating whether to print additional messages. Default is TRUE.}
+
+\item{invchol}{An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.}
 }
 \value{
 beta: The estimated coefficient for each predictor in X.

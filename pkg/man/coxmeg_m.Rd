@@ -8,20 +8,20 @@ coxmeg_m(X, outcome, corr, FID = NULL, cov = NULL, tau = NULL,
   min_tau = 1e-04, max_tau = 5, eps = 1e-06, order = 1,
   detap = TRUE, opt = "bobyqa", eigen = TRUE, score = FALSE,
   dense = FALSE, threshold = 0, solver = 1, spd = TRUE,
-  verbose = TRUE, mc = 100)
+  verbose = TRUE, mc = 100, invchol = TRUE)
 }
 \arguments{
-\item{X}{A matrix of the predictors with fixed effects. Each row is a sample, and the predictors are columns.}
+\item{X}{A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
 
-\item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for events/0 for censored).}
+\item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for failure / 0 for censored).}
 
-\item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' object in the Matrix package.}
+\item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
 
 \item{FID}{An optional string vector of family ID. If provided, the data will be reordered according to the family ID.}
 
-\item{cov}{An optional matrix of the covariates included in the null model for estimating the variance component. Each row is a sample, and the covariates are columns.}
+\item{cov}{An optional matrix of the covariates included in the null model for estimating the variance component. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the covariates are columns.}
 
-\item{tau}{An optional positive value for the variance component. If tau is given, the function will skip estimating the variance component, and use the given tau to analyze the predictors.}
+\item{tau}{An optional positive value for the variance component. If \code{tau} is given, the function will skip estimating the variance component, and use the given \code{tau} to analyze the predictors.}
 
 \item{min_tau}{An optional positive value indicating the lower bound in the optimization algorithm for the variance component \code{tau}. Default is 1e-4.}
 
@@ -35,7 +35,7 @@ coxmeg_m(X, outcome, corr, FID = NULL, cov = NULL, tau = NULL,
 
 \item{opt}{An optional logical value for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.}
 
-\item{eigen}{An optional logical value. Only valid when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
+\item{eigen}{An optional logical value. Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
 
 \item{score}{An optional logical value indicating whether to perform a score test. Default is FALSE.}
 
@@ -45,11 +45,13 @@ coxmeg_m(X, outcome, corr, FID = NULL, cov = NULL, tau = NULL,
 
 \item{solver}{An optional bianry value taking either 1 or 2. Default is 1. See details.}
 
-\item{spd}{An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE.}
+\item{spd}{An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. See details.}
 
 \item{verbose}{An optional logical value indicating whether to print additional messages. Default is TRUE.}
 
 \item{mc}{An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.}
+
+\item{invchol}{An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.}
 }
 \value{
 beta: The estimated coefficient for each predictor in X.
@@ -69,12 +71,12 @@ iter: The number of iterations until convergence.
 }
 \section{About \code{spd}}{
 
-When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, set \code{spd=FALSE}.
+When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, use \code{spd=FALSE}.
 }
 
 \section{About \code{solver}}{
 
-\code{solver} When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
+When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
 }
 
 \examples{
