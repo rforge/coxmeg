@@ -2,7 +2,7 @@
 library(knitcitations)
 cleanbib()
 options("citation_format" = "pandoc")
-r<-citep("10.3389/fpubh.2016.00003")
+r<-citep("10.1101/729285")
 write.bibtex(file="references.bib")
 
 ## ----eval=FALSE----------------------------------------------------------
@@ -78,5 +78,24 @@ re
 re = coxmeg_plink(pheno,sigma,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
 re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re
+
+## ----echo=TRUE-----------------------------------------------------------
+geno = matrix(rbinom(nrow(sigma)*10,2,runif(nrow(sigma)*10,0.05,0.5)),nrow(sigma),10)
+pheno_m = read.table(pheno)
+re = coxmeg_m(geno,pheno_m[,3:4],sigma,detap=TRUE,dense=FALSE,verbose=FALSE)
+re
+
+## ----echo=TRUE-----------------------------------------------------------
+sigma[2,1] = sigma[1,2] = 1
+re = coxmeg_plink(pheno,sigma,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE,spd=FALSE)
+re
+
+## ----echo=TRUE-----------------------------------------------------------
+re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2)
+re
+
+## ----echo=TRUE-----------------------------------------------------------
+re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2,score=TRUE)
 re
 

@@ -153,6 +153,7 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   }
   
   nz <- nnzero(corr)
+  sparsity = -1
   if(nz>(n*n/2))
   {
     dense <- TRUE
@@ -188,10 +189,10 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
     if(verbose==TRUE)
     {print('The relatedness matrix is treated as sparse.')}
     corr <- as(corr, 'dgCMatrix')
-    if(eigen==FALSE)
-    {
-      corr <- as(corr, 'symmetricMatrix')
-    }
+    #if(eigen==FALSE)
+    #{
+    #  corr <- as(corr, 'symmetricMatrix')
+    #}
     
     if(spsd==FALSE)
     {
@@ -212,7 +213,8 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
     
     nz_i <- nnzero(sigma_i_s)
     si_d <- NULL
-    if((nz_i>nz)&(spsd==FALSE))
+    sparsity = nz_i/nz
+    if((nz_i>nz)&&(spsd==FALSE))
     {
       inv <- FALSE
       s_d <- as.vector(Matrix::diag(corr))
@@ -228,7 +230,6 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
     sigma_i_s <- as(sigma_i_s,'dgCMatrix')
     if(eigen==FALSE)
     {
-      # sigma_i_s <- as(sigma_i_s, 'symmetricMatrix')
       sigma_i_s = Matrix::forceSymmetric(sigma_i_s)
     }
     
@@ -239,15 +240,15 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   marg_ll = 0
   if(opt=='bobyqa')
   {
-    new_t <- bobyqa(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad)
+    new_t <- bobyqa(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
     iter <- new_t$iter
     marg_ll = new_t$value
   }else{
     if(opt=='Brent')
     {
-      new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad)
+      new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
     }else{
-      new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad)
+      new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
     }
     iter <- new_t$counts
     marg_ll = new_t$value
@@ -261,7 +262,7 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   {
     re <- irls_ex(beta, u, tau_e, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,det=FALSE,detap=FALSE,sigma_s=NULL,s_d=NULL,eigen=eigen,solver=solver)
   }else{
-    re <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, X, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver)
+    re <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, X, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
   }
 
   if(k>0)

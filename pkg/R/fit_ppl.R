@@ -129,6 +129,7 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
   }
   
   nz <- nnzero(corr)
+  sparsity = -1
   if(nz>(n*n/2))
   {dense <- TRUE}
   
@@ -155,10 +156,10 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
     {print('The covariance matrix is treated as sparse.')}
     
     corr <- as(corr, 'dgCMatrix')
-    if(eigen==FALSE)
-    {
-      corr <- as(corr, 'symmetricMatrix')
-    }
+    # if(eigen==FALSE)
+    # {
+    #  corr <- as(corr, 'symmetricMatrix')
+    #}
   
     if(spsd==FALSE)
     {
@@ -179,7 +180,8 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
     
     nz_i <- nnzero(sigma_i_s)
     si_d <- NULL
-    if((nz_i>nz)&(spsd==FALSE))
+    sparsity = nz_i/nz
+    if((nz_i>nz)&&(spsd==FALSE))
     {
       inv <- FALSE
       s_d <- as.vector(Matrix::diag(corr))
@@ -191,13 +193,12 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
     sigma_i_s <- as(sigma_i_s,'dgCMatrix')
     if(eigen==FALSE)
     {
-      # sigma_i_s <- as(sigma_i_s, 'symmetricMatrix')
       sigma_i_s = Matrix::forceSymmetric(sigma_i_s)
     }
     
     if(inv==TRUE)
     {corr <- s_d <- NULL}
-    res <- irls_fast_ap(beta, u, tau, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,order,det=FALSE,detap=TRUE,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver)
+    res <- irls_fast_ap(beta, u, tau, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,order,det=FALSE,detap=TRUE,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
     
   }
   

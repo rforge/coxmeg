@@ -12,7 +12,7 @@ irls_ex <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, 
   inv <- TRUE
   if(is.null(s_d)==FALSE)
   {inv <- FALSE}
-  tol = 1e-10
+  tol = eps*1e-3
   maxiter = 200
   
   ## rs_rs, rs_cs only for c++

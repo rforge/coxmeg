@@ -8,6 +8,8 @@
 //
 // [[Rcpp::depends(RcppEigen)]]
 
+typedef Eigen::SparseMatrix<double> SpMat;
+
 // simple example of creating two matrices and
 // returning the result of an operatioon on them
 //
@@ -26,3 +28,13 @@ Eigen::VectorXd pcg_dense(const Eigen::MatrixXd & A, const Eigen::MatrixXd & B, 
   return x;
 }
 
+// [[Rcpp::export]]
+Eigen::MatrixXd pcg_sparse(Eigen::SparseMatrix<double> & A, const Eigen::MatrixXd & B, const double tol) {
+  
+  Eigen::ConjugateGradient<SpMat, Eigen::Lower|Eigen::Upper > solver_cg;
+  solver_cg.setTolerance(tol);
+  solver_cg.compute(A);
+  Eigen::MatrixXd x = solver_cg.solve(B);
+  
+  return x;
+}

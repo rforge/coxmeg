@@ -77,6 +77,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// pcg_sparse
+Eigen::MatrixXd pcg_sparse(Eigen::SparseMatrix<double>& A, const Eigen::MatrixXd& B, const double tol);
+RcppExport SEXP _coxmeg_pcg_sparse(SEXP ASEXP, SEXP BSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::SparseMatrix<double>& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type B(BSEXP);
+    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(pcg_sparse(A, B, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rs_sum
 Rcpp::List rs_sum(const Eigen::VectorXd& rk_v, const Eigen::VectorXd& d);
 RcppExport SEXP _coxmeg_rs_sum(SEXP rk_vSEXP, SEXP dSEXP) {
@@ -176,6 +189,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_coxmeg_invsph", (DL_FUNC) &_coxmeg_invsph, 14},
     {"_coxmeg_logdeth", (DL_FUNC) &_coxmeg_logdeth, 10},
     {"_coxmeg_pcg_dense", (DL_FUNC) &_coxmeg_pcg_dense, 3},
+    {"_coxmeg_pcg_sparse", (DL_FUNC) &_coxmeg_pcg_sparse, 3},
     {"_coxmeg_rs_sum", (DL_FUNC) &_coxmeg_rs_sum, 2},
     {"_coxmeg_csqei", (DL_FUNC) &_coxmeg_csqei, 6},
     {"_coxmeg_wma_cp", (DL_FUNC) &_coxmeg_wma_cp, 4},

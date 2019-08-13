@@ -17,6 +17,10 @@ pcg_dense <- function(A, B, tol) {
     .Call('_coxmeg_pcg_dense', PACKAGE = 'coxmeg', A, B, tol)
 }
 
+pcg_sparse <- function(A, B, tol) {
+    .Call('_coxmeg_pcg_sparse', PACKAGE = 'coxmeg', A, B, tol)
+}
+
 rs_sum <- function(rk_v, d) {
     .Call('_coxmeg_rs_sum', PACKAGE = 'coxmeg', rk_v, d)
 }

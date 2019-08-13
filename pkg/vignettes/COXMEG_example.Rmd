@@ -13,7 +13,7 @@ vignette: >
 library(knitcitations)
 cleanbib()
 options("citation_format" = "pandoc")
-r<-citep("10.3389/fpubh.2016.00003")
+r<-citep("10.1101/729285")
 write.bibtex(file="references.bib")
 ```
 
@@ -28,6 +28,15 @@ Time-to-event is one of the most important phenotypes in genetic epidemiology. T
 ```{r,eval=FALSE}
 install.packages("coxmeg", repos="http://R-Forge.R-project.org")
 ```
+
+## Functions
+
+The current version provides four functions.
+
+  *  `coxmeg`: Fit a Cox mixed-effects model.
+  *  `coxmeg_m`: Perform a GWAS using a genotype matrix.
+  *  `coxmeg_plink`: Perform a GWAS using plink files.
+  *  `fit_ppl`: Estimate HRs given a variance component.
 
 ## Fit a Cox mixed-effects model with a sparse relatedness matrix
 
@@ -89,7 +98,7 @@ re_coxme
 
 We compare the results with coxme. The integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used. 
 
-## Perform GWAS of an age-at-onset phenotype
+## Perform GWAS of an age-at-onset phenotype with a sparse relatedness matrix
 
 We illustrate how to perform a GWAS using the ```coxmeg_plink``` function. This function supports plink bed files. We provide example files in the package. The example plink files include 20 SNPs and 3000 subjects from 600 families. The following code performs a GWAS for all SNPs in the example bed files.
 
@@ -127,3 +136,39 @@ re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=FALSE,verb
 re
 ```
 
+When the genotypes of a group of SNPs are stored in a matrix, the function ```coxmeg_m``` can be used to perform GWAS for each of the SNPs. Similarly, ```coxmeg_m``` first estimates the variance component without the SNPs. In the following example, we simulate 10 independent SNPs, and use ```coxmeg_m``` to perform association analysis.
+
+```{r,echo=TRUE}
+geno = matrix(rbinom(nrow(sigma)*10,2,runif(nrow(sigma)*10,0.05,0.5)),nrow(sigma),10)
+pheno_m = read.table(pheno)
+re = coxmeg_m(geno,pheno_m[,3:4],sigma,detap=TRUE,dense=FALSE,verbose=FALSE)
+re
+```
+
+## Handle positive semidefinite relatedness matrices
+
+We now assume that the first two subjects in the sample are monozygotic twins, and thus the relatedness matrix becomes positive semidefinite. To handle this, use ```spd=FALSE``` as follows.
+
+```{r,echo=TRUE}
+sigma[2,1] = sigma[1,2] = 1
+re = coxmeg_plink(pheno,sigma,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE,spd=FALSE)
+re
+```
+
+The warning indicates that the matrix is not full rank. The rank is less than the sample size. 
+
+## Perform GWAS of an age-at-onset phenotype with a dense relatedness matrix
+
+When the relatedness matrix is dense and large (>5000), it will be more efficient to specify ```dense=TRUE```, and use preconditioned conjugate gradiant ```solver=2``` and stochastic lanczos quadrature ```detap=TRUE``` in the optimization. These can be specified as follows.
+
+```{r,echo=TRUE}
+re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2)
+re
+```
+
+The above command estimates HRs and report p-values. Instead, a score test, which is computationally much more efficient, can also be used by specifying ```score=TRUE```. 
+
+```{r,echo=TRUE}
+re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2,score=TRUE)
+re
+```

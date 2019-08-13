@@ -1,6 +1,6 @@
 
 
-irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, rs_cs, rs_cs_p, order=1,det=FALSE,detap=TRUE,sigma_s=NULL,s_d=NULL,eigen=TRUE,solver=1)
+irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, rs_cs, rs_cs_p, order=1,det=FALSE,detap=TRUE,sigma_s=NULL,s_d=NULL,eigen=TRUE,solver=1,sparsity=-1)
 {
   n <- length(u)
   n_c <- length(beta)
@@ -29,7 +29,12 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
   s <- as.vector(cswei(w_v,rs_rs,ind-1,1))
   loglik <- newloglik <- 0
   
-  siu <- as.vector(sigma_i_s%*%u_new)
+  if((inv==FALSE)&(sparsity>50))
+  {
+    siu = as.vector(pcg_sparse(sigma_s,as.matrix(u_new),eps*1e-3)) 
+  }else{
+    siu = as.vector(sigma_i_s%*%u_new)
+  }
   newloglik <- sum(eta_v[n1_ind]) - sum(log(s)[n1_ind]) - 0.5*t(u_new)%*%siu/tau
   lik_dif <- iter <- eps_s <- logdet <- 0
   maxiter = 200
@@ -48,9 +53,6 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
   {
     loglik <- newloglik
     a_v <- d_v/s
-    # b_v <- m%*%as.vector(a_v)
-    # b_v <- cumsum(a_v[ind[,1]])[rs_cs][ind[,2]]
-    # b_v <- as.vector(cswei(a_v,rs_cs-1,ind-1,0))
     bw_v <- w_v*as.vector(cswei(a_v,rs_cs,ind-1,0))
     deriv <- d_v - bw_v
     if(n_c>0)
@@ -75,7 +77,6 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
       a_v_2 <- (as.vector(a_v)*as.vector(a_v))[ind[,1]]
       wb_sig_i_hx_der <- der_t
       if(n_c>0){
-        # w_v_x <- csqei(w_v,X,rs_rs-1,rs_cs-1,ind-1,a_v_2)
         xh <- t(bw_v*X - csqei(w_v,X,rs_rs,rs_cs,ind-1,a_v_2))
         wb_sig_i_hx_der <- cbind(wb_sig_i_hx_der, t(xh))
       }
@@ -129,11 +130,15 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
     }
     
     w_v <- as.vector(exp(eta_v))
-    # s <- t(m)%*%w_v
-    # s <- cumsum(rev(w_v[ind[,1]]))[rs_rs][ind[,2]]
     s <- as.vector(cswei(w_v,rs_rs,ind-1,1))
     
-    siu <- as.vector(sigma_i_s%*%u_new)
+    # siu <- as.vector(sigma_i_s%*%u_new)
+    if((inv==FALSE)&(sparsity>50))
+    {
+      siu = as.vector(pcg_sparse(sigma_s,as.matrix(u_new),eps*1e-3)) 
+    }else{
+      siu = as.vector(sigma_i_s%*%u_new)
+    }
     usiu <- Matrix::t(u_new)%*%siu
     newloglik <- sum(eta_v[n1_ind]) - sum(log(s)[n1_ind]) - 0.5*usiu/tau
     lik_dif <- as.numeric(newloglik) - as.numeric(loglik)

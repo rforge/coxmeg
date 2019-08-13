@@ -167,11 +167,6 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
   rs <- rs_sum(rk-1,d_v[ind[,1]])
   if(spd==FALSE)
   {
-    # minei = eigs_sym(corr, 1, which = "SM")
-    # if(minei$values < -1e-10)
-    # {
-    #   stop(paste0("The relatedness matrix has negative eigenvalues (", minei$values,")."))
-    # }
     if(max(colSums(corr))<1e-10)
     {
       stop("The relatedness matrix has a zero eigenvalue with an eigenvector of 1s.")
@@ -190,6 +185,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
   }
   
   nz <- nnzero(corr)
+  sparsity = -1
   if(nz>(n*n/2))
   {
     dense <- TRUE
@@ -221,11 +217,13 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     }
     si_d <- as.vector(diag(sigma_i_s))
   }else{
+    if(verbose==TRUE)
+    {print('The relatedness matrix is treated as sparse.')}
     corr <- as(corr, 'dgCMatrix')
-    if(eigen==FALSE)
-    {
-      corr <- as(corr, 'symmetricMatrix')
-    }
+    # if(eigen==FALSE)
+    # {
+    #   corr <- as(corr, 'symmetricMatrix')
+    # }
     
     if(spsd==FALSE)
     {
@@ -246,7 +244,8 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     
     nz_i <- nnzero(sigma_i_s)
     si_d <- NULL
-    if(nz_i>nz)
+    sparsity = nz_i/nz
+    if((nz_i>nz)&&(spsd==FALSE))
     {
       inv <- FALSE
       s_d <- as.vector(Matrix::diag(corr))
@@ -262,7 +261,6 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     sigma_i_s <- as(sigma_i_s,'dgCMatrix')
     if(eigen==FALSE)
     {
-      # sigma_i_s <- as(sigma_i_s, 'symmetricMatrix')
       sigma_i_s = Matrix::forceSymmetric(sigma_i_s)
     }
     
@@ -277,14 +275,14 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     tau_e = 0.5 
     if(opt=='bobyqa')
     {
-      new_t <- bobyqa(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad)
+      new_t <- bobyqa(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
       iter <- new_t$iter
     }else{
       if(opt=='Brent')
       {
-        new_t <- optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad)
+        new_t <- optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
       }else{
-        new_t <- optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad)
+        new_t <- optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
       }
       iter <- new_t$counts
     }
@@ -360,7 +358,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
       }else{
         cme_re <- sapply(1:p, function(i)
         {
-          res <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver)
+          res <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
           c(res$beta[1],res$v11[1,1])
         })
       }
@@ -393,13 +391,13 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
       {
         if(opt=='bobyqa')
         {
-          new_t <- bobyqa(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=as.matrix(X[,c(i,c_ind)]), d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=TRUE,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad)
+          new_t <- bobyqa(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=as.matrix(X[,c(i,c_ind)]), d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=TRUE,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
         }else{
           if(opt=='Brent')
           {
-            new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=as.matrix(X[,c(i,c_ind)]), d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=TRUE,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad)
+            new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=as.matrix(X[,c(i,c_ind)]), d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=TRUE,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
           }else{
-            new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=as.matrix(X[,c(i,c_ind)]), d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=TRUE,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad)
+            new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=as.matrix(X[,c(i,c_ind)]), d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=TRUE,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
           }
         }
         tau_s <- new_t$par
@@ -407,7 +405,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
         {
           res <- irls_ex(beta, u, tau_s, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,det=FALSE,detap=FALSE,sigma_s=NULL,s_d=NULL,eigen=eigen,solver=solver)
         }else{
-          res <- irls_fast_ap(beta, u, tau_s, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=TRUE,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver)
+          res <- irls_fast_ap(beta, u, tau_s, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=TRUE,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
         }
         c(tau_s,res$beta[1],res$v11[1,1])
       })
@@ -423,7 +421,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     u <- rep(0,n)
     if(dense==FALSE)
     {
-      model_n <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, cov, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver)
+      model_n <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, cov, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
     }else{
       model_n <- irls_ex(beta, u, tau_e, si_d, sigma_i_s, cov, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,det=FALSE,detap=FALSE,sigma_s=NULL,s_d=NULL,eigen=eigen,solver=solver)
     }
