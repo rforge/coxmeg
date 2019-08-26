@@ -6,9 +6,7 @@ irls_ex <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, 
   n_c <- length(beta)
   dim_v <- n_c + n
   brc <- (n_c+1):dim_v
-  n1 <- sum(d_v>0)
   n1_ind <- which(d_v>0)
-  v_1 <- rep(1,n)
   inv <- TRUE
   if(is.null(s_d)==FALSE)
   {inv <- FALSE}
@@ -47,6 +45,7 @@ irls_ex <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, 
   
   while(((lik_dif>eps_s)||(iter<1))&&(iter<maxiter))
   {
+    damp = 1
     loglik <- newloglik
     a_v <- d_v/s
     
@@ -58,7 +57,6 @@ irls_ex <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, 
     a_v_2 <- as.vector(a_v_p*a_v_p)
     a_v_p <- a_v_p[a_v_p>0]
     
-    # v[brc,brc] <- diag(bw_v) - wma_cp(w_v,rs_cs_p-1,ind-1,a_v_p) + sigma_i_s
     v[brc,brc] = sigma_i_s/tau - wma_cp(w_v,rs_cs_p-1,ind-1,a_v_p)
     diag(v[brc,brc]) = diag(v[brc,brc]) + bw_v
     
@@ -86,15 +84,38 @@ irls_ex <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, 
     }
     
     w_v <- as.vector(exp(eta_v))
-    # s <- t(m)%*%w_v
     s <- as.vector(cswei(w_v,rs_rs,ind-1,1))
     siu <- as.vector(sigma_i_s%*%u_new)/tau
     newloglik <- sum(eta_v[n1_ind]) - sum(log(s)[n1_ind]) - 0.5*t(u_new)%*%siu
-    lik_dif <- as.numeric(newloglik - loglik)
-    if(lik_dif<0)
-    {lik_dif = (-1)*lik_dif}
-    # eps_s = tau*eps*(-1)*loglik
     eps_s = eps*(-1)*loglik
+    lik_dif <- as.numeric(newloglik - loglik)
+    
+    while(lik_dif<(-eps_s))
+    {
+      damp = damp/2
+      if(damp<1e-2)
+      {
+        warning(paste0("The optimization of PPL may not converge."))
+        lik_dif = 0
+        break
+      }
+      new_d = damp*new
+      u_new <- u_new - new_d[(n_c+1):dim_v]
+      if(n_c>0)
+      {
+        beta_new <- beta_new - new_d[1:n_c]
+        eta_v <- X%*%beta_new+u_new
+      }else{
+        eta_v <- u_new
+      }
+      
+      w_v <- as.vector(exp(eta_v))
+      s <- as.vector(cswei(w_v,rs_rs,ind-1,1))
+      siu <- as.vector(sigma_i_s%*%u_new)/tau
+      newloglik <- sum(eta_v[n1_ind]) - sum(log(s)[n1_ind]) - 0.5*t(u_new)%*%siu
+      lik_dif <- as.numeric(newloglik - loglik)
+    }
+    
     iter <- iter + 1
   }
   

@@ -6,7 +6,7 @@
 #' @section About \code{corr}:
 #' The subjects in \code{corr} must be in the same order as in the plink fam file.
 #' @section About missing values:
-#' \code{pheno} -9 for missing values, \code{cov} NA for missing values.
+#' \code{pheno} -9 for missing values, \code{cov_file} NA for missing values.
 #' @section About temporary files:
 #' The function will create a temporary gds file with approximately the same size as the bed file. The temporary file will be removed when the analysis is done.
 #' @section About \code{spd}:
@@ -20,7 +20,7 @@
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
 #' @param bed A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.
 #' @param tau An optional positive value for the variance component. If tau is given, the function will skip estimating the variance component, and use the given tau to analyze the SNPs.
-#' @param cov An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.
+#' @param cov_file An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.
 #' @param eps An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.
 #' @param min_tau An optional positive value indicating the lower bound in the optimization algorithm for the variance component tau. Default is 1e-4.
 #' @param max_tau An optional positive value indicating the upper bound in the optimization algorithm for the variance component tau. Default is 5.
@@ -68,11 +68,11 @@
 #' cov = system.file("extdata", "ex_cov.txt", package = "coxmeg")
 #' bed = system.file("extdata", "example_null.bed", package = "coxmeg")
 #' bed = substr(bed,1,nchar(bed)-4)
-#' re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=FALSE)
+#' re = coxmeg_plink(pheno,sigma,bed,cov_file=cov,detap=TRUE,dense=FALSE)
 #' re
 
 
-coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,score=FALSE,dense=FALSE,threshold=0,solver=1,spd=TRUE,mc=100,verbose=TRUE,invchol=TRUE){
+coxmeg_plink <- function(pheno,corr,bed=NULL,cov_file=NULL,tau=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,score=FALSE,dense=FALSE,threshold=0,solver=1,spd=TRUE,mc=100,verbose=TRUE,invchol=TRUE){
   
   if(eps<0)
   {eps <- 1e-6}
@@ -104,11 +104,11 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     phenod = read.table(pfs[file.exists(pfs)][1],header=FALSE,stringsAsFactors=FALSE)  
   }
   
-  cov.fn = NULL
-  if(is.null(cov)==FALSE)
+  cov.fn = cov = NULL
+  if(is.null(cov_file)==FALSE)
   {
-    cov.fn = paste0(cd,'/',cov)
-    pfs = c(cov,cov.fn)
+    cov.fn = paste0(cd,'/',cov_file)
+    pfs = c(cov_file,cov.fn)
     if(sum(file.exists(pfs))>0)
     {
       cov = read.table(pfs[file.exists(pfs)][1],header=FALSE,na.strings = "NA",stringsAsFactors=FALSE)
@@ -117,7 +117,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     }
   }
   
-  if(is.null(cov.fn)==TRUE)
+  if(is.null(cov)==TRUE)
   {samind = which((phenod[,3]!=-9)&(phenod[,4]!=-9))}else{
     covna = apply(as.matrix(cov[,3:ncol(cov)]),1,function(x) sum(is.na(x)))
     samind = which((phenod[,3]!=-9)&(phenod[,4]!=-9)&(covna==0))
@@ -142,14 +142,35 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
   }
   
   if(verbose==TRUE)
-  {print(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
+  {message(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
   
   n <- nrow(outcome)
+  if(min(outcome[,2] %in% c(0,1))<1)
+  {stop("The status should be either 0 (censored) or 1 (failure).")}
+  
   u <- rep(0,n)
   if(is.null(cov)==FALSE)
   {
-    k <- ncol(cov)
-    beta <- rep(0,k)
+    x_sd = which(as.vector(apply(cov,2,sd))>0)
+    x_ind = length(x_sd)
+    if(x_ind==0)
+    {
+      warning("The covariates are all constants after the removal of subjects.")
+      k <- 0
+      beta <- numeric(0)
+      cov <- matrix(0,0,0)
+    }else{
+      k <- ncol(cov)
+      if(x_ind<k)
+      {
+        warning(paste0(k-x_ind," covariate(s) is/are removed because they are all constants after the removal of subjects."))
+        cov = cov[,x_sd,drop=FALSE]
+        k <- ncol(cov)
+      }
+      beta <- rep(0,k)
+    }
+    # k <- ncol(cov)
+    # beta <- rep(0,k)
   }else{
     k <- 0
     beta <- numeric(0)
@@ -176,12 +197,12 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     if(rk_cor<n)
     {spsd = TRUE}
     if(verbose==TRUE)
-    {print(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
+    {message(paste0('There is/are ',k,' covariates. The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
   }else{
     spsd = FALSE
     rk_cor = n
     if(verbose==TRUE)
-    {print(paste0('The sample size included is ',n,'.'))}
+    {message(paste0('There is/are ',k,' covariates. The sample size included is ',n,'.'))}
   }
   
   nz <- nnzero(corr)
@@ -191,10 +212,12 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     dense <- TRUE
   }
   
+  rad = NULL
+  
   if(dense==TRUE)
   {
     if(verbose==TRUE)
-    {print('The relatedness matrix is treated as dense.')}
+    {message('The relatedness matrix is treated as dense.')}
     corr = as.matrix(corr)
     if(spsd==FALSE)
     {
@@ -204,7 +227,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
       corr <- ginv(corr)
     }
     if(verbose==TRUE)
-    {print('The relatedness matrix is inverted.')}
+    {message('The relatedness matrix is inverted.')}
     inv <- TRUE
     sigma_i_s = corr
     corr = s_d = NULL
@@ -218,7 +241,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     si_d <- as.vector(diag(sigma_i_s))
   }else{
     if(verbose==TRUE)
-    {print('The relatedness matrix is treated as sparse.')}
+    {message('The relatedness matrix is treated as sparse.')}
     corr <- as(corr, 'dgCMatrix')
     # if(eigen==FALSE)
     # {
@@ -273,17 +296,15 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
   if(is.null(tau))
   {
     tau_e = 0.5 
+    new_t = switch(
+      opt,
+      'bobyqa' = bobyqa(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+      'Brent' = optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+      'NM' = optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+      stop("The argument opt should be bobyqa, Brent or NM.")
+    )
     if(opt=='bobyqa')
-    {
-      new_t <- bobyqa(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-      iter <- new_t$iter
-    }else{
-      if(opt=='Brent')
-      {
-        new_t <- optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-      }else{
-        new_t <- optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-      }
+    {iter <- new_t$iter}else{
       iter <- new_t$counts
     }
     
@@ -303,7 +324,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
   }
   
   if(verbose==TRUE)
-  {print(paste0('The variance component is estimated. Start analyzing SNPs...'))}
+  {message(paste0('The variance component is estimated. Start analyzing SNPs...'))}
   
   gds.fn = paste0(bed,"_",floor(runif(1,0,1)*1e8),".gds")
   snpgdsBED2GDS(bed.fn, fam.fn, bim.fn, gds.fn,verbose=verbose)
@@ -352,14 +373,34 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
       {
         cme_re <- sapply(1:p, function(i)
         {
+          tryCatch({
           res <- irls_ex(beta, u, tau_e, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,det=FALSE,detap=FALSE,sigma_s=NULL,s_d=NULL,eigen=eigen,solver=solver)
-          c(res$beta[1],res$v11[1,1])
+          c(res$beta[1],res$v11[1,1])},
+          warning = function(war){
+            message(paste0('The estimation may not converge for SNP ',i, ' in block ',bi))
+            c(NA,NA)
+            },
+          error = function(err){
+            message(paste0('The estimation failed for SNP ',i, ' in block ',bi))
+            c(NA,NA)
+            }
+          )
         })
       }else{
         cme_re <- sapply(1:p, function(i)
         {
+          tryCatch({
           res <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
-          c(res$beta[1],res$v11[1,1])
+          c(res$beta[1],res$v11[1,1])},
+          warning = function(war){
+            message(paste0('The estimation may not converge for SNP ',i, ' in block ',bi))
+            c(NA,NA)
+            },
+          error = function(err){
+            message(paste0('The estimation failed for SNP ',i, ' in block ',bi))
+            c(NA,NA)
+            }
+          )
         })
       }
       
@@ -373,7 +414,7 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov=NULL,tau=NULL,maf=0.05,min_tau=
     if(length(top)>0)
     {
       if(verbose==TRUE)
-      {print(paste0('Finish analyzing SNPs. Start analyzing top SNPs using a variant-specific variance component...'))}
+      {message(paste0('Finish analyzing SNPs. Start analyzing top SNPs using a variant-specific variance component...'))}
       
       X = snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[top],with.id=TRUE,verbose=FALSE)
       X = X$genotype

@@ -71,13 +71,13 @@ for(i in 1:n_f)
 }
 sigma <- as.matrix(bdiag(mat_list))
 
-re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re = coxmeg_plink(pheno,sigma,bed,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg_plink(pheno,sigma,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re = coxmeg_plink(pheno,sigma,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
-re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
@@ -88,14 +88,14 @@ re
 
 ## ----echo=TRUE-----------------------------------------------------------
 sigma[2,1] = sigma[1,2] = 1
-re = coxmeg_plink(pheno,sigma,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE,spd=FALSE)
+re = coxmeg_plink(pheno,sigma,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE,spd=FALSE)
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2)
+re = coxmeg_plink(pheno,sigma,bed,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2)
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2,score=TRUE)
+re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2,score=TRUE)
 re
 

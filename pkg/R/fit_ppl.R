@@ -87,10 +87,24 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
   }
   
   if(verbose==TRUE)
-  {print(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
+  {message(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
+  
+  x_sd = which(as.vector(apply(X,2,sd))>0)
+  x_ind = length(x_sd)
+  if(x_ind==0)
+  {stop("The predictors are all constants after the removal of subjects.")}else{
+    k <- ncol(X)
+    if(x_ind<k)
+    {
+      warning(paste0(k-x_ind," predictor(s) is/are removed because they are all constants after the removal of subjects."))
+      X = X[,x_sd,drop=FALSE]
+      k <- ncol(X)
+    }
+  }
   
   n <- nrow(outcome)
-  k <- ncol(X)
+  if(min(outcome[,2] %in% c(0,1))<1)
+  {stop("The status should be either 0 (censored) or 1 (failure).")}
   u <- rep(0,n)
   beta <- rep(0,k)
   
@@ -119,13 +133,13 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
     if(rk_cor<n)
     {spsd = TRUE}
     if(verbose==TRUE)
-    {print(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
+    {message(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
     
   }else{
     spsd = FALSE
     rk_cor = n
     if(verbose==TRUE)
-    {print(paste0('The sample size included is ',n,'.'))}
+    {message(paste0('The sample size included is ',n,'.'))}
   }
   
   nz <- nnzero(corr)
@@ -136,7 +150,7 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
   if(dense==TRUE)
   {
     if(verbose==TRUE)
-    {print('The relatedness matrix is treated as dense.')}
+    {message('The relatedness matrix is treated as dense.')}
     corr = as.matrix(corr)
     if(spsd==FALSE)
     {
@@ -153,7 +167,7 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
   }else{
     
     if(verbose==TRUE)
-    {print('The covariance matrix is treated as sparse.')}
+    {message('The covariance matrix is treated as sparse.')}
     
     corr <- as(corr, 'dgCMatrix')
     # if(eigen==FALSE)

@@ -101,14 +101,33 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   }
   
   if(verbose==TRUE)
-  {print(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
+  {message(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
   
   n <- nrow(outcome)
+  if(min(outcome[,2] %in% c(0,1))<1)
+  {stop("The status should be either 0 (censored) or 1 (failure).")}
+  
   u <- rep(0,n)
   if(is.null(X)==FALSE)
   {
-    k <- ncol(X)
-    beta <- rep(0,k)
+    x_sd = which(as.vector(apply(X,2,sd))>0)
+    x_ind = length(x_sd)
+    if(x_ind==0)
+    {
+      warning("The predictors are all constants after the removal of subjects.")
+      k <- 0
+      beta <- numeric(0)
+      X <- matrix(0,0,0)
+    }else{
+      k <- ncol(X)
+      if(x_ind<k)
+      {
+        warning(paste0(k-x_ind," predictor(s) is/are removed because they are all constants after the removal of subjects."))
+        X = X[,x_sd,drop=FALSE]
+        k <- ncol(X)
+      }
+      beta <- rep(0,k)
+    }
   }else{
     k <- 0
     beta <- numeric(0)
@@ -128,11 +147,6 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   rs <- rs_sum(rk-1,d_v[ind[,1]])
   if(spd==FALSE)
   {
-    # minei = eigs_sym(corr, 1, which = "SM")
-    # if(minei$values < -1e-10)
-    # {
-    #   stop(paste0("The relatedness matrix has negative eigenvalues (", minei$values,")."))
-    # }
     if(max(colSums(corr))<1e-10)
     {
       stop("The relatedness matrix has a zero eigenvalue with an eigenvector of 1s.")
@@ -143,13 +157,13 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
     {spsd = TRUE}
     
     if(verbose==TRUE)
-    {print(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
+    {message(paste0('There is/are ',k,' predictors. The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
     
   }else{
     spsd = FALSE
     rk_cor = n
     if(verbose==TRUE)
-    {print(paste0('The sample size included is ',n,'.'))}
+    {message(paste0('There is/are ',k,' predictors. The sample size included is ',n,'.'))}
   }
   
   nz <- nnzero(corr)
@@ -164,7 +178,7 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   if(dense==TRUE)
   {
     if(verbose==TRUE)
-    {print('The relatedness matrix is treated as dense.')}
+    {message('The relatedness matrix is treated as dense.')}
     corr = as.matrix(corr)
     if(spsd==FALSE)
     {
@@ -174,7 +188,7 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
       corr <- ginv(corr)
     }
     if(verbose==TRUE)
-    {print('The relatedness matrix is inverted.')}
+    {message('The relatedness matrix is inverted.')}
     inv <- TRUE
     sigma_i_s = corr
     corr = s_d = NULL
@@ -187,7 +201,7 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
     si_d <- as.vector(diag(sigma_i_s))
   }else{
     if(verbose==TRUE)
-    {print('The relatedness matrix is treated as sparse.')}
+    {message('The relatedness matrix is treated as sparse.')}
     corr <- as(corr, 'dgCMatrix')
     #if(eigen==FALSE)
     #{
@@ -238,20 +252,17 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   }
   
   marg_ll = 0
+  new_t = switch(
+    opt,
+    'bobyqa' = bobyqa(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+    'Brent' = optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+    'NM' = optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+    stop("The argument opt should be bobyqa, Brent or NM.")
+  )
+  marg_ll = new_t$value
   if(opt=='bobyqa')
-  {
-    new_t <- bobyqa(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-    iter <- new_t$iter
-    marg_ll = new_t$value
-  }else{
-    if(opt=='Brent')
-    {
-      new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-    }else{
-      new_t <- optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-    }
+  {iter <- new_t$iter}else{
     iter <- new_t$counts
-    marg_ll = new_t$value
   }
   
   tau_e <- new_t$par

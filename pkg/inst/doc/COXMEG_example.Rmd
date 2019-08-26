@@ -86,6 +86,10 @@ re
 
 In the above result, ```tau``` is the estimated variance component, and ```int_ll``` is -2*log(lik) of the integrated/marginal likelihood of tau. 
 
+It should be noted that when the relatedness matrix is symmetric positive definite (SPD), ```coxmeg``` will make use of the sparsity by setting ```dense=FALSE``` regardless of whether the relatedness matrix or its inverse is sparse. However, when the relatedness matrix is symmetric positive semidefinite (SPSD), ```coxmeg``` can make use of the sparsity only when its inverse is sparse. When the relatedness matrix is SPSD and its inverse is dense, setting ```dense=FALSE``` will result in worse performance. In such a case, it would be better to use ```dense=TRUE``` or to convert the relatedness matrix to SPD or block-diagonal if possible.    
+
+We compare the results with coxme, which are slightly different due to different approximation of the log-determinant used in the estimation of the variance component. Also, the integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used.
+
 ```{r,echo=TRUE}
 library(coxme)
 bls <- c(1)
@@ -96,7 +100,6 @@ re_coxme = coxme(Surv(outcome[,1],outcome[,2])~as.matrix(pred)+(1|as.character(1
 re_coxme
 ```
 
-We compare the results with coxme. The integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used. 
 
 ## Perform GWAS of an age-at-onset phenotype with a sparse relatedness matrix
 
@@ -121,7 +124,7 @@ for(i in 1:n_f)
 }
 sigma <- as.matrix(bdiag(mat_list))
 
-re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re = coxmeg_plink(pheno,sigma,bed,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
 ```
 
@@ -130,9 +133,9 @@ The above code first retrieves the full path of the files. If the full path is n
 The ```coxmeg_plink``` function fist estimates the variance component with only the covariates, and then uses it to analyze each SNP after filtering. These two steps can be done separately as follows. The first command without bed only esitmates the variance component tau, and the second command uses the estimated tau to analyze the SNPs. The ```coxmeg_plink``` function will write a temporary .gds file for the SNPs in the same folder of the bed files. The temporary file is removed after the analysis is done. 
 
 ```{r,echo=TRUE}
-re = coxmeg_plink(pheno,sigma,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re = coxmeg_plink(pheno,sigma,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
-re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
 ```
 
@@ -151,7 +154,7 @@ We now assume that the first two subjects in the sample are monozygotic twins, a
 
 ```{r,echo=TRUE}
 sigma[2,1] = sigma[1,2] = 1
-re = coxmeg_plink(pheno,sigma,cov=cov,detap=TRUE,dense=FALSE,verbose=FALSE,spd=FALSE)
+re = coxmeg_plink(pheno,sigma,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE,spd=FALSE)
 re
 ```
 
@@ -162,13 +165,15 @@ The warning indicates that the matrix is not full rank. The rank is less than th
 When the relatedness matrix is dense and large (>5000), it will be more efficient to specify ```dense=TRUE```, and use preconditioned conjugate gradiant ```solver=2``` and stochastic lanczos quadrature ```detap=TRUE``` in the optimization. These can be specified as follows.
 
 ```{r,echo=TRUE}
-re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2)
+re = coxmeg_plink(pheno,sigma,bed,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2)
 re
 ```
 
-The above command estimates HRs and report p-values. Instead, a score test, which is computationally much more efficient, can also be used by specifying ```score=TRUE```. 
+The above command estimates HRs and reports p-values. Instead, a score test, which is computationally much more efficient, can be used by specifying ```score=TRUE```.  
 
 ```{r,echo=TRUE}
-re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2,score=TRUE)
+re = coxmeg_plink(pheno,sigma,bed,tau=re$tau,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2,score=TRUE)
 re
 ```
+
+In the results, ```score_test``` is the score test statistics, which follow a chi-sq distribution.

@@ -6,7 +6,6 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
   n_c <- length(beta)
   dim_v <- n_c + n
   n1_ind <- which(d_v>0)
-  v_1 <- rep(1,n)
   inv <- TRUE
   if(is.null(s_d)==FALSE)
   {inv <- FALSE}
@@ -24,7 +23,6 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
     eta_v <- u_new
   }
   w_v <- as.vector(exp(eta_v))
-  # s <- cumsum(rev(w_v[ind[,1]]))[rs_rs][ind[,2]]
   ## (-1) for cpp
   s <- as.vector(cswei(w_v,rs_rs,ind-1,1))
   loglik <- newloglik <- 0
@@ -142,6 +140,7 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
     usiu <- Matrix::t(u_new)%*%siu
     newloglik <- sum(eta_v[n1_ind]) - sum(log(s)[n1_ind]) - 0.5*usiu/tau
     lik_dif <- as.numeric(newloglik) - as.numeric(loglik)
+    
     if(lik_dif<0)
     {lik_dif = (-1)*lik_dif}
     # eps_s = tau*eps*(-1)*loglik
@@ -211,7 +210,6 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
     }
   }else{
     a_v <- d_v/s
-    # b_v <- cumsum(a_v[ind[,1]])[rs_cs][ind[,2]]
     # b_v <- as.vector(cswei(a_v,rs_cs-1,ind-1,0))
     bw_v <- w_v*as.vector(cswei(a_v,rs_cs,ind-1,0))
     

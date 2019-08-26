@@ -4,7 +4,7 @@
 \alias{coxmeg_plink}
 \title{Perform GWAS using a Cox mixed-effects model with plink files as input}
 \usage{
-coxmeg_plink(pheno, corr, bed = NULL, cov = NULL, tau = NULL,
+coxmeg_plink(pheno, corr, bed = NULL, cov_file = NULL, tau = NULL,
   maf = 0.05, min_tau = 1e-04, max_tau = 5, eps = 1e-06,
   order = 1, detap = TRUE, opt = "bobyqa", eigen = TRUE,
   score = FALSE, dense = FALSE, threshold = 0, solver = 1,
@@ -17,7 +17,7 @@ coxmeg_plink(pheno, corr, bed = NULL, cov = NULL, tau = NULL,
 
 \item{bed}{A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.}
 
-\item{cov}{An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.}
+\item{cov_file}{An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.}
 
 \item{tau}{An optional positive value for the variance component. If tau is given, the function will skip estimating the variance component, and use the given tau to analyze the SNPs.}
 
@@ -78,7 +78,7 @@ The subjects in \code{corr} must be in the same order as in the plink fam file.
 
 \section{About missing values}{
 
-\code{pheno} -9 for missing values, \code{cov} NA for missing values.
+\code{pheno} -9 for missing values, \code{cov_file} NA for missing values.
 }
 
 \section{About temporary files}{
@@ -123,7 +123,7 @@ pheno = system.file("extdata", "ex_pheno.txt", package = "coxmeg")
 cov = system.file("extdata", "ex_cov.txt", package = "coxmeg")
 bed = system.file("extdata", "example_null.bed", package = "coxmeg")
 bed = substr(bed,1,nchar(bed)-4)
-re = coxmeg_plink(pheno,sigma,bed,cov=cov,detap=TRUE,dense=FALSE)
+re = coxmeg_plink(pheno,sigma,bed,cov_file=cov,detap=TRUE,dense=FALSE)
 re
 }
 \keyword{Cox}

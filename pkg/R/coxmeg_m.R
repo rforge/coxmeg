@@ -112,15 +112,35 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
   }
   
   if(verbose==TRUE)
-  {print(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
+  {message(paste0('Remove ', length(rem), ' subjects censored before the first failure.'))}
   
   n <- nrow(outcome)
+  if(min(outcome[,2] %in% c(0,1))<1)
+  {stop("The status should be either 0 (censored) or 1 (failure).")}
+  
   p <- ncol(X)
   u <- rep(0,n)
   if(is.null(cov)==FALSE)
   {
-    k <- ncol(cov)
-    beta <- rep(0,k)
+    x_sd = which(as.vector(apply(cov,2,sd))>0)
+    x_ind = length(x_sd)
+    if(x_ind==0)
+    {
+      warning("The covariates are all constants after the removal of subjects.")
+      k <- 0
+      beta <- numeric(0)
+      cov <- matrix(0,0,0)
+    }else{
+      k <- ncol(cov)
+      if(x_ind<k)
+      {
+        warning(paste0(k-x_ind," covariate(s) is/are removed because they are all constants after the removal of subjects."))
+        cov = cov[,x_sd,drop=FALSE]
+        k <- ncol(cov)
+      }
+      beta <- rep(0,k)
+    }
+    
   }else{
     k <- 0
     beta <- numeric(0)
@@ -138,11 +158,6 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
   rs <- rs_sum(rk-1,d_v[ind[,1]])
   if(spd==FALSE)
   {
-    # minei = eigs_sym(corr, 1, which = "SM")
-    # if(minei$values < -1e-10)
-    # {
-    #   stop(paste0("The relatedness matrix has negative eigenvalues (", minei$values,")."))
-    # }
     if(max(colSums(corr))<1e-10)
     {
       stop("The relatedness matrix has a zero eigenvalue with an eigenvector of 1s.")
@@ -152,12 +167,12 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
     if(rk_cor<n)
     {spsd = TRUE}
     if(verbose==TRUE)
-    {print(paste0('The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
+    {message(paste0('There is/are ',k,' covariates. The sample size included is ',n,'. The rank of the relatedness matrix is ', rk_cor))}
   }else{
     spsd = FALSE
     rk_cor = n
     if(verbose==TRUE)
-    {print(paste0('The sample size included is ',n,'.'))}
+    {message(paste0('There is/are ',k,' covariates. The sample size included is ',n,'.'))}
   }
   
   nz <- nnzero(corr)
@@ -172,7 +187,7 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
   if(dense==TRUE)
   {
     if(verbose==TRUE)
-    {print('The relatedness matrix is treated as dense.')}
+    {message('The relatedness matrix is treated as dense.')}
     corr = as.matrix(corr)
     if(spsd==FALSE)
     {
@@ -182,7 +197,7 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
       corr <- ginv(corr)
     }
     if(verbose==TRUE)
-    {print('The relatedness matrix is inverted.')}
+    {message('The relatedness matrix is inverted.')}
     inv <- TRUE
     sigma_i_s = corr
     corr = s_d = NULL
@@ -196,7 +211,7 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
     si_d <- as.vector(diag(sigma_i_s))
   }else{
     if(verbose==TRUE)
-    {print('The relatedness matrix is treated as sparse.')}
+    {message('The relatedness matrix is treated as sparse.')}
     corr <- as(corr, 'dgCMatrix')
     # if(eigen==FALSE)
     # {
@@ -219,6 +234,8 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
       }
       sigma_i_s = sigma_i_s$vectors%*%(c(1/sigma_i_s$values[1:rk_cor],rep(0,n-rk_cor))*t(sigma_i_s$vectors))
     }
+    if(verbose==TRUE)
+    {message('The relatedness matrix is inverted.')}
     
     nz_i <- nnzero(sigma_i_s)
     si_d <- NULL
@@ -249,17 +266,16 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
   if(is.null(tau))
   {
     tau_e = 0.5
+    new_t = switch(
+      opt,
+      'bobyqa' = bobyqa(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+      'Brent' = optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+      'NM' = optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+      stop("The argument opt should be bobyqa, Brent or NM.")
+    )
+    
     if(opt=='bobyqa')
-    {
-      new_t <- bobyqa(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-      iter <- new_t$iter
-    }else{
-      if(opt=='Brent')
-      {
-        new_t <- optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-      }else{
-        new_t <- optim(tau_e, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity)
-      }
+    {iter <- new_t$iter}else{
       iter <- new_t$counts
     }
     
@@ -274,6 +290,8 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
   }
   
   snpval = which(apply(X,2,sd)>0)
+  if(verbose==TRUE)
+  {message(paste0('The variance component is estimated. Start analyzing SNPs...'))}
   
   if(score==FALSE)
   {
@@ -293,14 +311,35 @@ coxmeg_m <- function(X,outcome,corr,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-04,max
     {
       cme_re <- sapply(snpval, function(i)
       {
+        tryCatch({
         res <- irls_ex(beta, u, tau_e, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,det=FALSE,detap=FALSE,sigma_s=NULL,s_d=NULL,eigen=eigen,solver=solver)
-        c(res$beta[1],res$v11[1,1])
+        c(res$beta[1],res$v11[1,1])},
+        warning = function(war){
+          message(paste0('The estimation may not converge for predictor ',i))
+          c(NA,NA)
+          },
+        error = function(err){
+          message(paste0('The estimation failed for predictor ',i))
+          c(NA,NA)
+          }
+        )
       })
     }else{
       cme_re <- sapply(snpval, function(i)
       {
+        tryCatch({
         res <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, as.matrix(X[,c(i,c_ind)]), eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
         c(res$beta[1],res$v11[1,1])
+        },
+        warning = function(war){
+          message(paste0('The estimation may not converge for predictor ',i))
+          c(NA,NA)
+         },
+        error = function(err){
+          message(paste0('The estimation failed for predictor ',i))
+          c(NA,NA)
+          }
+        )
       })
     }
     
