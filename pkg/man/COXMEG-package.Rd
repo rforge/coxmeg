@@ -9,7 +9,7 @@
 }
 \details{
 
-coxmeg is an efficient R package for conducting GWAS of age-at-onset using a Cox mixed-effects model. coxmeg introduces a fast estimation algorithm for general sparse relatedness matrices including but not limited to block-diagonal pedigree-based matrices. coxmeg also introduces a fast and powerful score test for fully dense relatedness matrices, accounting for both population stratification and family structure. In addition, coxmeg can handle positive semidefinite relatedness matrices.
+coxmeg is an R package for efficiently conducting GWAS of age-at-onset traits using a Cox mixed-effects model. coxmeg introduces a fast estimation algorithm for general sparse relatedness matrices including but not limited to block-diagonal pedigree-based matrices. coxmeg also introduces a fast and powerful score test for fully dense relatedness matrices, accounting for both population stratification and family structure. In addition, coxmeg can handle positive semidefinite relatedness matrices. Compared to coxme, coxmeg substantially improves the computational efficiency for estimating or testing genetic effects by using a variance component estimated once from a null model, and introducing fast algorithms, including inexact newton methods, preconditioned conjugate gradient methods and stochastic Lanczos quadrature.
 
 }
 \author{

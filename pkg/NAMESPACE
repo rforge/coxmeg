@@ -1,6 +1,5 @@
 useDynLib(coxmeg)
-import(RcppEigen)
-importFrom(Rcpp, evalCpp)
+import(Rcpp)
 importFrom(nloptr,bobyqa)
 importFrom(MASS,ginv)
 importFrom(matrixcalc,matrix.rank)

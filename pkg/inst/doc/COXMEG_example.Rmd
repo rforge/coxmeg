@@ -1,5 +1,5 @@
 ---
-title: "Cox mixed-effects models for genome-wide association analysis"
+title: "Cox Mixed-Effects Model for Genome-Wide Association Studies"
 author: "Liang He"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
