@@ -12,7 +12,7 @@
 
 <meta name="author" content="Liang He" />
 
-<meta name="date" content="2019-08-26" />
+<meta name="date" content="2019-08-28" />
 
 <title>Cox Mixed-Effects Model for Genome-Wide Association Studies</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Cox Mixed-Effects Model for Genome-Wide Association Studies</h1>
 <h4 class="author"><em>Liang He</em></h4>
-<h4 class="date"><em>2019-08-26</em></h4>
+<h4 class="date"><em>2019-08-28</em></h4>
 
 
 
@@ -125,12 +125,12 @@ ycen &lt;-<span class="st"> </span><span class="kw">pmin</span>(y, cen)
 outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span class="kw">as.numeric</span>(y <span class="op">&lt;=</span><span class="st"> </span>cen))
 <span class="kw">head</span>(outcome)</code></pre></div>
 <pre><code>##           ycen  
-## [1,]  0.836222 0
-## [2,]  3.730862 1
-## [3,]  5.305646 1
-## [4,]  2.101697 1
-## [5,] 10.221432 1
-## [6,]  2.190453 1</code></pre>
+## [1,] 0.5095712 1
+## [2,] 1.9880763 1
+## [3,] 0.1781270 1
+## [4,] 5.2677333 1
+## [5,] 0.2862845 1
+## [6,] 4.0152474 1</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sigma[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>,<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>]</code></pre></div>
 <pre><code>## 5 x 5 sparse Matrix of class &quot;dgCMatrix&quot;
 ##                         
@@ -147,21 +147,21 @@ outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span c
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
 <pre><code>## $beta
 ##            [,1]
-## [1,] 0.07674498
+## [1,] 0.02209262
 ## 
 ## $HR
 ##          [,1]
-## [1,] 1.079767
+## [1,] 1.022338
 ## 
 ## $sd_beta
-## [1] 0.03759849
+## [1] 0.0352251
 ## 
 ## $p
-##            [,1]
-## [1,] 0.04123376
+##           [,1]
+## [1,] 0.5305386
 ## 
 ## $tau
-## [1] 0.1854759
+## [1] 0.1243568
 ## 
 ## $iter
 ## [1] 17
@@ -173,7 +173,7 @@ outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span c
 ## [1] 1000
 ## 
 ## $int_ll
-## [1] 11484.2</code></pre>
+## [1] 11518.85</code></pre>
 <p>In the above result, <code>tau</code> is the estimated variance component, and <code>int_ll</code> is -2*log(lik) of the integrated/marginal likelihood of tau.</p>
 <p>It should be noted that when the relatedness matrix is symmetric positive definite (SPD), <code>coxmeg</code> will make use of the sparsity by setting <code>dense=FALSE</code> regardless of whether the relatedness matrix or its inverse is sparse. However, when the relatedness matrix is symmetric positive semidefinite (SPSD), <code>coxmeg</code> can make use of the sparsity only when its inverse is sparse. When the relatedness matrix is SPSD and its inverse is dense, setting <code>dense=FALSE</code> will result in worse performance. In such a case, it would be better to use <code>dense=TRUE</code> or to convert the relatedness matrix to SPD or block-diagonal if possible.</p>
 <p>We compare the results with coxme, which are slightly different due to different approximation of the log-determinant used in the estimation of the variance component. Also, the integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used.</p>
@@ -187,23 +187,23 @@ re_coxme =<span class="st"> </span><span class="kw">coxme</span>(<span class="kw
 re_coxme</code></pre></div>
 <pre><code>## Cox mixed-effects model fit by maximum likelihood
 ## 
-##   events, n = 943, 1000
-##   Iterations= 11 50 
+##   events, n = 945, 1000
+##   Iterations= 7 33 
 ##                     NULL Integrated    Fitted
-## Log-likelihood -5582.052  -5574.596 -5439.329
+## Log-likelihood -5594.808  -5591.951 -5494.426
 ## 
-##                    Chisq     df          p   AIC     BIC
-## Integrated loglik  14.91   2.00 5.7830e-04 10.91    1.21
-##  Penalized loglik 285.44 124.85 1.3545e-14 35.75 -569.66
+##                    Chisq    df         p   AIC     BIC
+## Integrated loglik   5.71  2.00 5.749e-02  1.71   -7.99
+##  Penalized loglik 200.76 92.26 5.011e-10 16.24 -431.35
 ## 
 ## Model:  Surv(outcome[, 1], outcome[, 2]) ~ as.matrix(pred) + (1 | as.character(1:n)) 
 ## Fixed coefficients
-##                       coef exp(coef)   se(coef)    z     p
-## as.matrix(pred) 0.07683412  1.079863 0.03764354 2.04 0.041
+##                       coef exp(coef)   se(coef)    z    p
+## as.matrix(pred) 0.02218763  1.022436 0.03526485 0.63 0.53
 ## 
 ## Random effects
 ##  Group             Variable Std Dev   Variance 
-##  as.character.1.n. Vmat.1   0.4326894 0.1872201</code></pre>
+##  as.character.1.n. Vmat.1   0.3551563 0.1261360</code></pre>
 </div>
 <div id="perform-gwas-of-an-age-at-onset-phenotype-with-a-sparse-relatedness-matrix" class="section level2">
 <h2>Perform GWAS of an age-at-onset phenotype with a sparse relatedness matrix</h2>
@@ -360,16 +360,16 @@ re =<span class="st"> </span><span class="kw">coxmeg_m</span>(geno,pheno_m[,<spa
 re</code></pre></div>
 <pre><code>## $summary
 ##            beta        HR    sd_beta          p
-## 1   0.010560250 1.0106162 0.02895105 0.71528891
-## 2   0.010990868 1.0110515 0.03065432 0.71993759
-## 3  -0.014923420 0.9851874 0.02921470 0.60947783
-## 4   0.050867074 1.0521830 0.02961595 0.08587754
-## 5  -0.007710608 0.9923190 0.03075239 0.80202135
-## 6  -0.023505138 0.9767690 0.02948855 0.42539663
-## 7  -0.025599551 0.9747253 0.02939162 0.38376441
-## 8   0.032531277 1.0330662 0.02946483 0.26956216
-## 9   0.025992947 1.0263337 0.02985346 0.38392638
-## 10 -0.018446115 0.9817230 0.02952715 0.53215677
+## 1   0.009732897 1.0097804 0.02902092 0.73734204
+## 2   0.001042114 1.0010427 0.02921621 0.97154625
+## 3  -0.021691232 0.9785423 0.02949779 0.46212570
+## 4   0.008093401 1.0081262 0.02918078 0.78150844
+## 5   0.052993310 1.0544226 0.02926873 0.07020629
+## 6  -0.030953659 0.9695205 0.02904308 0.28652122
+## 7   0.002213589 1.0022160 0.02977202 0.94073083
+## 8  -0.050523856 0.9507312 0.02960389 0.08788481
+## 9  -0.002732016 0.9972717 0.03006491 0.92759543
+## 10 -0.003975900 0.9960320 0.02886531 0.89044613
 ## 
 ## $tau
 ## [1] 0.04052206
@@ -412,50 +412,50 @@ re =<span class="st"> </span><span class="kw">coxmeg_plink</span>(pheno,sigma,<s
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
 <pre><code>## $summary
 ##     snp.id chromosome position allele      afreq   index         beta
-## 1   null_0          1        1    d/D 0.30983333  null_0  0.015500258
-## 2   null_1          1        2    d/D 0.23466667  null_1  0.019025079
-## 3   null_2          1        3    D/d 0.14033333  null_2 -0.050238926
-## 4   null_3          1        4    D/d 0.16183333  null_3  0.043646398
-## 5   null_4          1        5    d/D 0.19933333  null_4  0.028359229
-## 6   null_5          1        6    D/d 0.11800000  null_5 -0.114298744
-## 7   null_6          1        7    d/D 0.09483333  null_6 -0.018134441
-## 8   null_7          1        8    D/d 0.49683333  null_7 -0.004347183
-## 9   null_8          1        9    d/D 0.31366667  null_8 -0.063670029
-## 10  null_9          1       10    D/d 0.49183333  null_9 -0.008615440
-## 11 null_10          1       11    d/D 0.34833333 null_10 -0.013522069
-## 12 null_11          1       12    D/d 0.25100000 null_11  0.037326879
-## 13 null_12          1       13    d/D 0.17500000 null_12 -0.017041795
-## 14 null_13          1       14    D/d 0.06333333 null_13 -0.068247772
-## 15 null_14          1       15    D/d 0.20833333 null_14 -0.014785226
-## 16 null_15          1       16    d/D 0.17050000 null_15  0.002116367
-## 17 null_16          1       17    D/d 0.33550000 null_16  0.004593700
-## 18 null_17          1       18    d/D 0.26633333 null_17  0.001073906
-## 19 null_18          1       19    D/d 0.09433333 null_18 -0.016122462
-## 20 null_19          1       20    d/D 0.11650000 null_19 -0.022973158
+## 1   null_0          1        1    d/D 0.30983333  null_0  0.015405664
+## 2   null_1          1        2    d/D 0.23466667  null_1  0.018981588
+## 3   null_2          1        3    D/d 0.14033333  null_2 -0.050050268
+## 4   null_3          1        4    D/d 0.16183333  null_3  0.043601803
+## 5   null_4          1        5    d/D 0.19933333  null_4  0.028314330
+## 6   null_5          1        6    D/d 0.11800000  null_5 -0.114161578
+## 7   null_6          1        7    d/D 0.09483333  null_6 -0.018241705
+## 8   null_7          1        8    D/d 0.49683333  null_7 -0.004335503
+## 9   null_8          1        9    d/D 0.31366667  null_8 -0.063651464
+## 10  null_9          1       10    D/d 0.49183333  null_9 -0.008611654
+## 11 null_10          1       11    d/D 0.34833333 null_10 -0.013508092
+## 12 null_11          1       12    D/d 0.25100000 null_11  0.037198524
+## 13 null_12          1       13    d/D 0.17500000 null_12 -0.017025667
+## 14 null_13          1       14    D/d 0.06333333 null_13 -0.068212730
+## 15 null_14          1       15    D/d 0.20833333 null_14 -0.014859447
+## 16 null_15          1       16    d/D 0.17050000 null_15  0.002161649
+## 17 null_16          1       17    D/d 0.33550000 null_16  0.004611188
+## 18 null_17          1       18    d/D 0.26633333 null_17  0.000973572
+## 19 null_18          1       19    D/d 0.09433333 null_18 -0.016127233
+## 20 null_19          1       20    d/D 0.11650000 null_19 -0.022896966
 ##           HR    sd_beta           p
-## 1  1.0156210 0.02936454 0.597599003
-## 2  1.0192072 0.03220239 0.554656388
-## 3  0.9510022 0.03857244 0.192760340
-## 4  1.0446129 0.03699425 0.238073522
-## 5  1.0287652 0.03430474 0.408415341
-## 6  0.8919914 0.04233469 0.006936368
-## 7  0.9820290 0.04653253 0.696747049
-## 8  0.9956623 0.02717817 0.872919477
-## 9  0.9383146 0.02953792 0.031119951
-## 10 0.9914216 0.02729067 0.752236506
-## 11 0.9865689 0.02857454 0.636055659
-## 12 1.0380323 0.03110760 0.230167382
-## 13 0.9831026 0.03625746 0.638339482
-## 14 0.9340290 0.05693894 0.230678333
-## 15 0.9853235 0.03430691 0.666490706
-## 16 1.0021186 0.03683311 0.954180148
-## 17 1.0046043 0.02859249 0.872360339
-## 18 1.0010745 0.03098628 0.972352879
-## 19 0.9840068 0.04725870 0.732988165
-## 20 0.9772887 0.04231538 0.587196389
+## 1  1.0155249 0.02933299 0.599444644
+## 2  1.0191629 0.03216672 0.555123431
+## 3  0.9511816 0.03853346 0.193985812
+## 4  1.0445663 0.03695264 0.238025157
+## 5  1.0287190 0.03426644 0.408634418
+## 6  0.8921138 0.04228565 0.006938718
+## 7  0.9819237 0.04648466 0.694744781
+## 8  0.9956739 0.02714736 0.873115381
+## 9  0.9383320 0.02950637 0.030989256
+## 10 0.9914253 0.02726276 0.752096580
+## 11 0.9865827 0.02854302 0.636032100
+## 12 1.0378990 0.03107407 0.231270576
+## 13 0.9831185 0.03621695 0.638282011
+## 14 0.9340617 0.05687885 0.230425517
+## 15 0.9852504 0.03426867 0.664567248
+## 16 1.0021640 0.03679362 0.953150725
+## 17 1.0046218 0.02856013 0.871734743
+## 18 1.0009740 0.03095434 0.974909177
+## 19 0.9840021 0.04720930 0.732643372
+## 20 0.9773632 0.04226966 0.588033450
 ## 
 ## $tau
-## [1] 0.03921303
+## [1] 0.03774966
 ## 
 ## $rank
 ## [1] 2999
@@ -470,51 +470,51 @@ re =<span class="st"> </span><span class="kw">coxmeg_plink</span>(pheno,sigma,<s
 ## Excluding 0 SNP (monomorphic: TRUE, MAF: 0.05, missing rate: 0)</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
 <pre><code>## $summary
-##     snp.id chromosome position allele      afreq   index  score_test
-## 1   null_0          1        1    d/D 0.30983333  null_0 0.278696458
-## 2   null_1          1        2    d/D 0.23466667  null_1 0.349052075
-## 3   null_2          1        3    D/d 0.14033333  null_2 1.695481747
-## 4   null_3          1        4    D/d 0.16183333  null_3 1.392461997
-## 5   null_4          1        5    d/D 0.19933333  null_4 0.683767202
-## 6   null_5          1        6    D/d 0.11800000  null_5 7.308327561
-## 7   null_6          1        7    d/D 0.09483333  null_6 0.151949920
-## 8   null_7          1        8    D/d 0.49683333  null_7 0.025614896
-## 9   null_8          1        9    d/D 0.31366667  null_8 4.641019052
-## 10  null_9          1       10    D/d 0.49183333  null_9 0.099701945
-## 11 null_10          1       11    d/D 0.34833333 null_10 0.223926427
-## 12 null_11          1       12    D/d 0.25100000 null_11 1.439961428
-## 13 null_12          1       13    d/D 0.17500000 null_12 0.220973006
-## 14 null_13          1       14    D/d 0.06333333 null_13 1.436954290
-## 15 null_14          1       15    D/d 0.20833333 null_14 0.185751443
-## 16 null_15          1       16    d/D 0.17050000 null_15 0.003303912
-## 17 null_16          1       17    D/d 0.33550000 null_16 0.025837210
-## 18 null_17          1       18    d/D 0.26633333 null_17 0.001201487
-## 19 null_18          1       19    D/d 0.09433333 null_18 0.116261293
-## 20 null_19          1       20    d/D 0.11650000 null_19 0.294969227
+##     snp.id chromosome position allele      afreq   index   score_test
+## 1   null_0          1        1    d/D 0.30983333  null_0 0.2758976677
+## 2   null_1          1        2    d/D 0.23466667  null_1 0.3482300804
+## 3   null_2          1        3    D/d 0.14033333  null_2 1.6862177352
+## 4   null_3          1        4    D/d 0.16183333  null_3 1.3927376868
+## 5   null_4          1        5    d/D 0.19933333  null_4 0.6831207439
+## 6   null_5          1        6    D/d 0.11800000  null_5 7.3074018451
+## 7   null_6          1        7    d/D 0.09483333  null_6 0.1540667386
+## 8   null_7          1        8    D/d 0.49683333  null_7 0.0255341411
+## 9   null_8          1        9    d/D 0.31366667  null_8 4.6484460054
+## 10  null_9          1       10    D/d 0.49183333  null_9 0.0998174251
+## 11 null_10          1       11    d/D 0.34833333 null_10 0.2239577549
+## 12 null_11          1       12    D/d 0.25100000 null_11 1.4331648971
+## 13 null_12          1       13    d/D 0.17500000 null_12 0.2210485524
+## 14 null_13          1       14    D/d 0.06333333 null_13 1.4385202561
+## 15 null_14          1       15    D/d 0.20833333 null_14 0.1880400990
+## 16 null_15          1       16    d/D 0.17050000 null_15 0.0034541590
+## 17 null_16          1       17    D/d 0.33550000 null_16 0.0260922467
+## 18 null_17          1       18    d/D 0.26633333 null_17 0.0009894375
+## 19 null_18          1       19    D/d 0.09433333 null_18 0.1165773020
+## 20 null_19          1       20    d/D 0.11650000 null_19 0.2936452826
 ##              p
-## 1  0.597556880
-## 2  0.554650218
-## 3  0.192879928
-## 4  0.237989767
-## 5  0.408292512
-## 6  0.006863578
-## 7  0.696678867
-## 8  0.872844411
-## 9  0.031216461
-## 10 0.752187605
-## 11 0.636064326
-## 12 0.230145582
-## 13 0.638299535
-## 14 0.230632839
-## 15 0.666476432
-## 16 0.954163105
-## 17 0.872298520
-## 18 0.972348880
-## 19 0.733125336
-## 20 0.587053589
+## 1  0.599402725
+## 2  0.555116753
+## 3  0.194100306
+## 4  0.237943313
+## 5  0.408514174
+## 6  0.006867115
+## 7  0.694678941
+## 8  0.873043305
+## 9  0.031081673
+## 10 0.752048841
+## 11 0.636040714
+## 12 0.231248619
+## 13 0.638242133
+## 14 0.230378945
+## 15 0.664552856
+## 16 0.953133636
+## 17 0.871675240
+## 18 0.974906419
+## 19 0.732776744
+## 20 0.587893962
 ## 
 ## $tau
-## [1] 0.03921303
+## [1] 0.03774966
 ## 
 ## $rank
 ## [1] 2999
