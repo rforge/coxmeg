@@ -4,11 +4,12 @@
 \alias{coxmeg_plink}
 \title{Perform GWAS using a Cox mixed-effects model with plink files as input}
 \usage{
-coxmeg_plink(pheno, corr, bed = NULL, cov_file = NULL, tau = NULL,
-  maf = 0.05, min_tau = 1e-04, max_tau = 5, eps = 1e-06,
-  order = 1, detap = TRUE, opt = "bobyqa", eigen = TRUE,
-  score = FALSE, dense = FALSE, threshold = 0, solver = 1,
-  spd = TRUE, mc = 100, verbose = TRUE, invchol = TRUE)
+coxmeg_plink(pheno, corr, bed = NULL, tmp_dir = NULL,
+  cov_file = NULL, tau = NULL, maf = 0.05, min_tau = 1e-04,
+  max_tau = 5, eps = 1e-06, order = 1, detap = TRUE,
+  opt = "bobyqa", eigen = TRUE, score = FALSE, dense = FALSE,
+  threshold = 0, solver = 1, spd = TRUE, mc = 100,
+  verbose = TRUE, invchol = TRUE)
 }
 \arguments{
 \item{pheno}{A string value indicating the file name or the full path of a pheno file. The files must be in the working directory if the full path is not given. The file is in plink pheno format, containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).}
@@ -16,6 +17,8 @@ coxmeg_plink(pheno, corr, bed = NULL, cov_file = NULL, tau = NULL,
 \item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
 
 \item{bed}{A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.}
+
+\item{tmp_dir}{A optional directory to store temporary .gds files. The directory needs to be specified when \code{bed} is provided.}
 
 \item{cov_file}{An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.}
 
@@ -123,7 +126,7 @@ pheno = system.file("extdata", "ex_pheno.txt", package = "coxmeg")
 cov = system.file("extdata", "ex_cov.txt", package = "coxmeg")
 bed = system.file("extdata", "example_null.bed", package = "coxmeg")
 bed = substr(bed,1,nchar(bed)-4)
-re = coxmeg_plink(pheno,sigma,bed,cov_file=cov,detap=TRUE,dense=FALSE)
+re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=FALSE)
 re
 }
 \keyword{Cox}

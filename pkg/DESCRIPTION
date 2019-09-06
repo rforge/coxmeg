@@ -1,11 +1,11 @@
 Package: coxmeg
 Type: Package
 Title: Cox Mixed-Effects Model for Genome-Wide Association Studies
-Version: 1.0.6
-Date: 2019-08-01
+Version: 1.0.7
+Date: 2019-09-05
 Author: Liang He
 Maintainer: Liang He <liang.he@duke.edu>
-Description: Fast algorithms for fitting a Cox mixed-effects model for e.g., genome-wide association studies.
+Description: Fast algorithms for fitting a Cox mixed-effects model for e.g., genome-wide association studies. See Liang He and Alexander Kulminski (2019) <dio:10.1101/729285>.
 License: GPL
 Imports: nloptr, MASS, matrixcalc, SNPRelate, rARPACK, stats, Matrix, methods, utils, knitcitations, coxme
 LinkingTo: Rcpp, RcppEigen

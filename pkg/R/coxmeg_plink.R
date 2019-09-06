@@ -19,6 +19,7 @@
 #' @param pheno A string value indicating the file name or the full path of a pheno file. The files must be in the working directory if the full path is not given. The file is in plink pheno format, containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
 #' @param bed A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.
+#' @param tmp_dir A optional directory to store temporary .gds files. The directory needs to be specified when \code{bed} is provided. 
 #' @param tau An optional positive value for the variance component. If tau is given, the function will skip estimating the variance component, and use the given tau to analyze the SNPs.
 #' @param cov_file An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.
 #' @param eps An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.
@@ -68,29 +69,31 @@
 #' cov = system.file("extdata", "ex_cov.txt", package = "coxmeg")
 #' bed = system.file("extdata", "example_null.bed", package = "coxmeg")
 #' bed = substr(bed,1,nchar(bed)-4)
-#' re = coxmeg_plink(pheno,sigma,bed,cov_file=cov,detap=TRUE,dense=FALSE)
+#' re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=FALSE)
 #' re
 
 
-coxmeg_plink <- function(pheno,corr,bed=NULL,cov_file=NULL,tau=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,score=FALSE,dense=FALSE,threshold=0,solver=1,spd=TRUE,mc=100,verbose=TRUE,invchol=TRUE){
+coxmeg_plink <- function(pheno,corr,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,score=FALSE,dense=FALSE,threshold=0,solver=1,spd=TRUE,mc=100,verbose=TRUE,invchol=TRUE){
   
   if(eps<0)
   {eps <- 1e-6}
+  
+  if(is.null(bed)==FALSE)
+  {
+    if((is.null(tmp_dir)==TRUE) || (file.exists(tmp_dir)==FALSE))
+    {stop('The temporary directory is not specified or does not exist.')}
+  }
   
   cd = getwd()
   
   if(is.null(bed)==FALSE)
   {
-    bed.fn = paste0(bed,'.bed')
-    bim.fn = paste0(bed,'.bim')
-    fam.fn = paste0(bed,'.fam')
+    bedbimfam.fn = paste0(bed,c('.bed','.fam','.bim'))
     
-    if((sum(file.exists(c(bim.fn,bed.fn,fam.fn)))<3))
+    if((sum(file.exists(bedbimfam.fn))<3))
     {
-      bed.fn = paste0(cd,'/',bed,'.bed')
-      bim.fn = paste0(cd,'/',bed,'.bim')
-      fam.fn = paste0(cd,'/',bed,'.fam')
-      if((sum(file.exists(c(bim.fn,bed.fn,fam.fn)))<3))
+      bedbimfam.fn = paste0(cd,'/',bed,c('.bed','.fam','.bim'))
+      if((sum(file.exists(bedbimfam.fn))<3))
       {stop('Cannot find the genotype files.')}
     }
   }
@@ -326,15 +329,12 @@ coxmeg_plink <- function(pheno,corr,bed=NULL,cov_file=NULL,tau=NULL,maf=0.05,min
   if(verbose==TRUE)
   {message(paste0('The variance component is estimated. Start analyzing SNPs...'))}
   
-  gds.fn = paste0(bed,"_",floor(runif(1,0,1)*1e8),".gds")
-  snpgdsBED2GDS(bed.fn, fam.fn, bim.fn, gds.fn,verbose=verbose)
+  gds.fn = paste0("tmp_",floor(runif(1,0,1)*1e8),".gds")
+  gds.fn = file.path(tmp_dir,gds.fn)
+  snpgdsBED2GDS(bedbimfam.fn[1], bedbimfam.fn[2], bedbimfam.fn[3], gds.fn,verbose=verbose)
   genofile <- snpgdsOpen(gds.fn,allow.duplicate=TRUE)
   # snp_info <- snpgdsSNPRateFreq(genofile,with.id=TRUE)
   snp_ind = snpgdsSelectSNP(genofile,sample.id=samid,maf=maf,missing.rate=0,remove.monosnp=TRUE)
-  # X = snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind,with.id=TRUE,verbose=FALSE)
-  # X = X$genotype
-  # snpgdsClose(genofile)
-  # file.remove(gds.fn)
   
   nsnp = length(snp_ind)
   blocks = 10000
