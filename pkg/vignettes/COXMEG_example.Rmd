@@ -11,10 +11,10 @@ vignette: >
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
 library(knitcitations)
-cleanbib()
-options("citation_format" = "pandoc")
-r<-citep("10.1101/729285")
-write.bibtex(file="references.bib")
+# cleanbib()
+# options("citation_format" = "pandoc")
+# r<-citep("10.1101/729285")
+# write.bibtex(file="references.bib")
 ```
 
 
@@ -148,9 +148,28 @@ re = coxmeg_m(geno,pheno_m[,3:4],sigma,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
 ```
 
+
+## Perform GWAS of an age-at-onset phenotype with a dense relatedness matrix
+
+When the relatedness matrix is dense and large (>5000), it will be more efficient to specify ```dense=TRUE```, and use preconditioned conjugate gradiant ```solver=2``` and stochastic lanczos quadrature ```detap=TRUE``` in the optimization. These can be specified as follows.
+
+```{r,echo=TRUE}
+re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,solver=2)
+re
+```
+
+The above command estimates HRs and reports p-values. Instead, a score test, which is computationally much more efficient, can be used by specifying ```score=TRUE```.  
+
+```{r,echo=TRUE}
+re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,solver=2,score=TRUE)
+re
+```
+
+In the results, ```score_test``` is the score test statistics, which follow a chi-sq distribution.
+
 ## Handle positive semidefinite relatedness matrices
 
-We now assume that the first two subjects in the sample are monozygotic twins, and thus the relatedness matrix becomes positive semidefinite. To handle this, use ```spd=FALSE``` as follows.
+We now assume that the first two subjects in the sample are monozygotic twins. In this case, the relatedness matrix becomes positive semidefinite. Specifying ```spd=FALSE``` will tell ```coxmeg_plink``` to handle a positive semidefinite relatedness matrix.
 
 ```{r,echo=TRUE}
 sigma[2,1] = sigma[1,2] = 1
@@ -158,22 +177,5 @@ re = coxmeg_plink(pheno,sigma,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE,
 re
 ```
 
-The warning indicates that the matrix is not full rank. The rank is less than the sample size. 
+The warning indicates that the relatedness matrix is not full rank. Because there is a twin pair in the sample, the rank of the relatedness matrix is less than the sample size. If the user is not sure whether the relatedness matrix is positive definite or positive semidefinite, it is better to use ```spd=FALSE```. 
 
-## Perform GWAS of an age-at-onset phenotype with a dense relatedness matrix
-
-When the relatedness matrix is dense and large (>5000), it will be more efficient to specify ```dense=TRUE```, and use preconditioned conjugate gradiant ```solver=2``` and stochastic lanczos quadrature ```detap=TRUE``` in the optimization. These can be specified as follows.
-
-```{r,echo=TRUE}
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2)
-re
-```
-
-The above command estimates HRs and reports p-values. Instead, a score test, which is computationally much more efficient, can be used by specifying ```score=TRUE```.  
-
-```{r,echo=TRUE}
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2,score=TRUE)
-re
-```
-
-In the results, ```score_test``` is the score test statistics, which follow a chi-sq distribution.

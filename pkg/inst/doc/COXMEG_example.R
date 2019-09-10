@@ -1,9 +1,9 @@
 ## ---- message=FALSE, warning=FALSE,echo=FALSE----------------------------
 library(knitcitations)
-cleanbib()
-options("citation_format" = "pandoc")
-r<-citep("10.1101/729285")
-write.bibtex(file="references.bib")
+# cleanbib()
+# options("citation_format" = "pandoc")
+# r<-citep("10.1101/729285")
+# write.bibtex(file="references.bib")
 
 ## ----eval=FALSE----------------------------------------------------------
 #  install.packages("coxmeg", repos="http://R-Forge.R-project.org")
@@ -87,15 +87,15 @@ re = coxmeg_m(geno,pheno_m[,3:4],sigma,detap=TRUE,dense=FALSE,verbose=FALSE)
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
+re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,solver=2)
+re
+
+## ----echo=TRUE-----------------------------------------------------------
+re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,solver=2,score=TRUE)
+re
+
+## ----echo=TRUE-----------------------------------------------------------
 sigma[2,1] = sigma[1,2] = 1
 re = coxmeg_plink(pheno,sigma,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE,spd=FALSE)
-re
-
-## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2)
-re
-
-## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,spd=FALSE,solver=2,score=TRUE)
 re
 
