@@ -1,15 +1,12 @@
 
 
-irls_ex <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, rs_cs, rs_cs_p,det=FALSE,detap=FALSE,sigma_s=NULL,s_d=NULL,eigen=FALSE,solver=1,rad=NULL)
+irls_ex <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, rs_cs, rs_cs_p,det=FALSE,detap='slq',solver=1,rad=NULL)
 {
   n <- length(u)
   n_c <- length(beta)
   dim_v <- n_c + n
   brc <- (n_c+1):dim_v
   n1_ind <- which(d_v>0)
-  inv <- TRUE
-  if(is.null(s_d)==FALSE)
-  {inv <- FALSE}
   tol = eps*1e-3
   maxiter = 200
   
@@ -148,16 +145,15 @@ irls_ex <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, 
     a_v_p <- a_v[ind[,1]]
     a_v_p <- a_v_p[a_v_p>0]
     
-    if(detap==FALSE)
+    if(detap=='slq')
     {
-      logdet <- logdeth(as(sigma_i_s,'dgCMatrix'),si_d,bw_v, w_v,rs_cs_p-1,ind-1,a_v_p,tau,1,0)
-    }else{
-      
       v[brc,brc] = sigma_i_s/tau - wma_cp(w_v,rs_cs_p-1,ind-1,a_v_p)
       diag(v[brc,brc]) = diag(v[brc,brc]) + bw_v
       
       v[brc,brc] = v[brc,brc]*tau
       logdet = logdet_lanczos(v[brc,brc], rad, 8) - n*log(tau)
+    }else{
+      logdet <- logdeth(as(sigma_i_s,'dgCMatrix'),si_d,bw_v, w_v,rs_cs_p-1,ind-1,a_v_p,tau,1,0)
     }
     
   }

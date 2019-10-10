@@ -45,3 +45,7 @@ logdet_lanczos <- function(X_m, rad_m, m_d) {
     .Call('_coxmeg_logdet_lanczos', PACKAGE = 'coxmeg', X_m, rad_m, m_d)
 }
 
+logdet_lanczos_sp <- function(X_m, rad_m, m_d) {
+    .Call('_coxmeg_logdet_lanczos_sp', PACKAGE = 'coxmeg', X_m, rad_m, m_d)
+}
+

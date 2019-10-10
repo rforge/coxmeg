@@ -65,7 +65,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // pcg_dense
-Eigen::VectorXd pcg_dense(const Eigen::MatrixXd& A, const Eigen::MatrixXd& B, const double tol);
+Eigen::MatrixXd pcg_dense(const Eigen::MatrixXd& A, const Eigen::MatrixXd& B, const double tol);
 RcppExport SEXP _coxmeg_pcg_dense(SEXP ASEXP, SEXP BSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -183,6 +183,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// logdet_lanczos_sp
+double logdet_lanczos_sp(const Eigen::SparseMatrix<double>& X_m, const Eigen::MatrixXd& rad_m, const Eigen::VectorXi& m_d);
+RcppExport SEXP _coxmeg_logdet_lanczos_sp(SEXP X_mSEXP, SEXP rad_mSEXP, SEXP m_dSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::SparseMatrix<double>& >::type X_m(X_mSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type rad_m(rad_mSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXi& >::type m_d(m_dSEXP);
+    rcpp_result_gen = Rcpp::wrap(logdet_lanczos_sp(X_m, rad_m, m_d));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_coxmeg_cswei", (DL_FUNC) &_coxmeg_cswei, 4},
@@ -196,6 +209,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_coxmeg_score_test", (DL_FUNC) &_coxmeg_score_test, 13},
     {"_coxmeg_logdet_ch", (DL_FUNC) &_coxmeg_logdet_ch, 5},
     {"_coxmeg_logdet_lanczos", (DL_FUNC) &_coxmeg_logdet_lanczos, 3},
+    {"_coxmeg_logdet_lanczos_sp", (DL_FUNC) &_coxmeg_logdet_lanczos_sp, 3},
     {NULL, NULL, 0}
 };
 

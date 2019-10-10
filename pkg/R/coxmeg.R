@@ -6,26 +6,24 @@
 #' @section About \code{spd}:
 #' When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, use \code{spd=FALSE}.
 #' @section About \code{solver}:
-#' When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance. 
-#' @section About \code{invchol}:
-#' Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used. 
+#' When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems. When \code{type='dense'}, it is recommended to set \code{solver=2} to have better computational performance. 
+#' @section About \code{detap}:
+#' When \code{detap='exact'}, the exact log-determinant is computed for estimating the variance component. Specifying \code{detap='diagonal'} uses diagonal approximation, and is only effective for a sparse relatedness matrix. Specifying \code{detap='slq'} uses stochastic lanczos quadrature approximation.   
 #' @param outcome A matrix contains time (first column) and status (second column). The status is a binary variable (1 for events / 0 for censored).
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
+#' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.
 #' @param X An optional matrix of the preidctors with fixed effects. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns. 
 #' @param FID An optional string vector of family ID. If provided, the data will be reordered according to the family ID.
 #' @param eps An optional positive scalar indicating the tolerance in the optimization algorithm. Default is 1e-6.
 #' @param min_tau An optional positive scalar indicating the lower bound in the optimization algorithm for the variance component \code{tau}. Default is 1e-4.
 #' @param max_tau An optional positive scalar indicating the upper bound in the optimization algorithm for the variance component \code{tau} Default is 5.
-#' @param dense An optional logical scalar indicating whether the relatedness matrix is dense. Default is FALSE.
 #' @param opt An optional logical scalar for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.
 #' @param spd An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. See details.
-#' @param detap An optional logical scalar indicating whether to use approximation for log-determinant. Default is TRUE.
-#' @param solver An optional bianry scalar taking either 1 or 2. Default is 1. See details.
+#' @param detap An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.
+#' @param solver An optional bianry value that can be either 1 (Cholesky Decomposition using RcppEigen), 2 (PCG) or 3 (Cholesky Decomposition using Matrix). Default is NULL, which lets the function select a solver. See details.
 #' @param order An optional integer scalar starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.
-#' @param eigen An optional logical scalar. Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.
 #' @param verbose An optional logical scalar indicating whether to print additional messages. Default is TRUE.
-#' @param mc An optional integer scalar specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.
-#' @param invchol An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.
+#' @param mc An optional integer scalar specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when \code{dense=TRUE} and \code{detap='slq'}. Default is 100.
 #' @return beta: The estimated coefficient for each predictor in X.
 #' @return HR: The estimated HR for each predictor in X.
 #' @return sd_beta: The estimated standard error of beta.
@@ -64,14 +62,23 @@
 #' outcome <- cbind(ycen,as.numeric(y <= cen))
 #' 
 #' ## fit a Cox mixed-effects model
-#' re = coxmeg(outcome,sigma,order=1,eigen=TRUE,dense=FALSE)
+#' re = coxmeg(outcome,sigma,type='bd',detap='diagonal',order=1)
 #' re
 
-coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=5,order=1,detap=TRUE,opt='bobyqa',eigen=TRUE,dense=FALSE,solver=1,spd=TRUE,verbose=TRUE, mc=100,invchol=TRUE){
+coxmeg <- function(outcome,corr,type,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=5,order=1,detap=NULL,opt='bobyqa',solver=NULL,spd=TRUE,verbose=TRUE, mc=100){
   
   if(eps<0)
   {eps <- 1e-6}
   
+  if(!(type %in% c('bd','sparse','dense')))
+  {stop("The type argument should be 'bd', 'sparse' or 'dense'.")}
+  
+  if(!is.null(detap))
+  {
+    if(!(detap %in% c('exact','slq','diagonal')))
+    {stop("The detap argument should be 'exact', 'diagonal' or 'slq'.")}
+  }
+    
   ## family structure
   if(is.null(FID)==FALSE)
   {
@@ -167,15 +174,11 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   }
   
   nz <- nnzero(corr)
-  sparsity = -1
   if(nz>(n*n/2))
-  {
-    dense <- TRUE
-  }
+  {type <- 'dense'}
   
-  rad = NULL
-  
-  if(dense==TRUE)
+  eigen = TRUE
+  if(type=='dense')
   {
     if(verbose==TRUE)
     {message('The relatedness matrix is treated as dense.')}
@@ -187,34 +190,54 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
     }else{
       corr <- ginv(corr)
     }
-    if(verbose==TRUE)
-    {message('The relatedness matrix is inverted.')}
     inv <- TRUE
     sigma_i_s = corr
     corr = s_d = NULL
-    if(detap==TRUE)
-    {
-      rad = rbinom(n*mc,1,0.5)
-      rad[rad==0] = -1
-      rad = matrix(rad,n,mc)/sqrt(n)
-    }
+    
     si_d <- as.vector(diag(sigma_i_s))
+    
+    if(is.null(solver))
+    {solver = 2}else{
+      if(solver==3)
+      {solver = 1}
+    }
+    if(is.null(detap))
+    {
+      if(n<3000)
+      {detap = 'exact'}else{
+        detap = 'slq'
+      }
+    }
   }else{
     if(verbose==TRUE)
     {message('The relatedness matrix is treated as sparse.')}
     corr <- as(corr, 'dgCMatrix')
-    #if(eigen==FALSE)
-    #{
-    #  corr <- as(corr, 'symmetricMatrix')
-    #}
+    si_d = s_d = NULL
     
     if(spsd==FALSE)
     {
-      if(invchol==TRUE)
+      if(type=='bd')
       {
         sigma_i_s <- Matrix::chol2inv(Matrix::chol(corr))
+        inv = TRUE
+        si_d <- as.vector(Matrix::diag(sigma_i_s))
+        if(is.null(detap))
+        {detap = 'diagonal'}
       }else{
-        sigma_i_s <- Matrix::solve(corr)
+        sigma_i_s = NULL
+        inv = FALSE
+        s_d <- as.vector(Matrix::diag(corr))
+        if(is.null(detap))
+        {
+          detap = 'slq'
+        }else{
+          if(detap=='exact')
+          {
+            detap = 'slq'
+            if(verbose==TRUE)
+            {message("detap=exact is not supported under this setting. The detap argument is changed to 'slq'.")}
+          }
+        }
       }
     }else{
       sigma_i_s = eigen(corr)
@@ -223,40 +246,83 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
         stop("The relatedness matrix has negative eigenvalues.")
       }
       sigma_i_s = sigma_i_s$vectors%*%(c(1/sigma_i_s$values[1:rk_cor],rep(0,n-rk_cor))*t(sigma_i_s$vectors))
-    }
-    
-    nz_i <- nnzero(sigma_i_s)
-    si_d <- NULL
-    sparsity = nz_i/nz
-    if((nz_i>nz)&&(spsd==FALSE))
-    {
-      inv <- FALSE
-      s_d <- as.vector(Matrix::diag(corr))
-      if(detap==FALSE)
-      {
-        si_d <- as.vector(Matrix::diag(sigma_i_s))
-      }
-    }else{
-      inv <- TRUE
+      inv = TRUE
       si_d <- as.vector(Matrix::diag(sigma_i_s))
+      if(is.null(detap))
+      {
+        if(type=='bd')
+        {detap = 'diagonal'}else{
+          detap = 'slq'
+        }
+      }
     }
     
-    sigma_i_s <- as(sigma_i_s,'dgCMatrix')
-    if(eigen==FALSE)
+    if(is.null(solver))
     {
-      sigma_i_s = Matrix::forceSymmetric(sigma_i_s)
+      if(type=='bd')
+      {
+        solver = 1
+        if(n>5e4)
+        {
+          eigen = FALSE
+        }
+      }else{solver = 2}
+    }else{
+      if(solver==3)
+      {
+        eigen = FALSE
+        solver = 1
+      }
     }
     
     if(inv==TRUE)
-    {corr <- s_d <- NULL}
+    {
+      sigma_i_s <- as(sigma_i_s,'dgCMatrix')
+      if(eigen==FALSE)
+      {
+        sigma_i_s = Matrix::forceSymmetric(sigma_i_s)
+      }
+      corr <- s_d <- NULL
+    }
+  }
+  
+  if(verbose==TRUE)
+  {
+    if(inv==TRUE)
+    {message('The relatedness matrix is inverted.')}
+    
+    message("The method for computing the determinant is '", detap, "'.")
+    
+    if(type=='dense')
+    {
+      switch(
+        solver,
+        '1' = message('Solver: solve (base).'),
+        '2' = message('Solver: PCG (RcppEigen:dense).')
+      )
+    }else{
+      switch(
+        solver,
+        '1' = message('Solver: Cholesky decomposition (RcppEigen=',eigen,').'),
+        '2' = message('Solver: PCG (RcppEigen:sparse).')
+      )
+    }
+  }
+  
+  rad = NULL
+  if(detap=='slq')
+  {
+    rad = rbinom(n*mc,1,0.5)
+    rad[rad==0] = -1
+    rad = matrix(rad,n,mc)/sqrt(n)
   }
   
   marg_ll = 0
   new_t = switch(
     opt,
-    'bobyqa' = bobyqa(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
-    'Brent' = optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
-    'NM' = optim(tau, mll, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,dense=dense,solver=solver,rad=rad,sparsity=sparsity),
+    'bobyqa' = bobyqa(tau, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,solver=solver,rad=rad),
+    'Brent' = optim(tau, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,solver=solver,rad=rad),
+    'NM' = optim(tau, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=X, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,solver=solver,rad=rad),
     stop("The argument opt should be bobyqa, Brent or NM.")
   )
   marg_ll = new_t$value
@@ -269,23 +335,25 @@ coxmeg <- function(outcome,corr,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max_tau=
   if(tau_e==min_tau)
   {warning(paste0("The estimated variance component equals the lower bound (", min_tau, "), probably suggesting no random effects."))}
   
-  if(dense==TRUE)
+  if(type=='dense')
   {
-    re <- irls_ex(beta, u, tau_e, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,det=FALSE,detap=FALSE,sigma_s=NULL,s_d=NULL,eigen=eigen,solver=solver)
+    re <- irls_ex(beta, u, tau_e, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,det=FALSE,detap=detap,solver=solver)
   }else{
-    re <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, X, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
-  }
-
-  if(k>0)
-  {
-    HR = exp(re$beta)
-    sdb = sqrt(diag(as.matrix(re$v11)))
-    p <- pchisq(re$beta^2/diag(re$v11),1,lower.tail=FALSE)
-  }else{
-    HR=sdb=p=NULL
+    re <- irls_fast_ap(beta, u, tau_e, si_d, sigma_i_s, X, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,order,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver)
   }
   
-  res <- list(beta=re$beta,HR=HR,sd_beta=sdb,p=p,tau=tau_e,iter=iter,rank=rk_cor,nsam=n,int_ll=marg_ll)
+  if(k>0)
+  {
+    res_beta = as.vector(re$beta)
+    res_var = diag(as.matrix(re$v11))
+    HR = exp(res_beta)
+    sdb = sqrt(res_var)
+    p = as.vector(pchisq(res_beta^2/res_var,1,lower.tail=FALSE))
+  }else{
+    res_beta=HR=sdb=p=NULL
+  }
+  
+  res <- list(beta=res_beta,HR=HR,sd_beta=sdb,p=p,tau=tau_e,iter=iter,rank=rk_cor,nsam=n,int_ll=marg_ll)
   return(res)
 }
 

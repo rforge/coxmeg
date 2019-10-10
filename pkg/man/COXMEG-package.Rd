@@ -51,7 +51,7 @@ ycen <- pmin(y, cen)
 outcome <- cbind(ycen,as.numeric(y <= cen))
 
 ## fit the Cox mixed-effects model
-re = coxmeg(outcome,sigma,order=1,eigen=TRUE,dense=FALSE)
+re = coxmeg(outcome,sigma,type='bd',order=1,detap='diagonal')
 re
 
 }

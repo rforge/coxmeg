@@ -4,17 +4,18 @@
 \alias{coxmeg_plink}
 \title{Perform GWAS using a Cox mixed-effects model with plink files as input}
 \usage{
-coxmeg_plink(pheno, corr, bed = NULL, tmp_dir = NULL,
+coxmeg_plink(pheno, corr, type, bed = NULL, tmp_dir = NULL,
   cov_file = NULL, tau = NULL, maf = 0.05, min_tau = 1e-04,
-  max_tau = 5, eps = 1e-06, order = 1, detap = TRUE,
-  opt = "bobyqa", eigen = TRUE, score = FALSE, dense = FALSE,
-  threshold = 0, solver = 1, spd = TRUE, mc = 100,
-  verbose = TRUE, invchol = TRUE)
+  max_tau = 5, eps = 1e-06, order = 1, detap = NULL,
+  opt = "bobyqa", score = FALSE, threshold = 0, solver = NULL,
+  spd = TRUE, mc = 100, verbose = TRUE)
 }
 \arguments{
 \item{pheno}{A string value indicating the file name or the full path of a pheno file. The files must be in the working directory if the full path is not given. The file is in plink pheno format, containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).}
 
 \item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
+
+\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.}
 
 \item{bed}{A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.}
 
@@ -34,15 +35,11 @@ coxmeg_plink(pheno, corr, bed = NULL, tmp_dir = NULL,
 
 \item{order}{An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.}
 
-\item{detap}{An optional logical value indicating whether to use approximation for log-determinant. Default is TRUE.}
+\item{detap}{An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.}
 
 \item{opt}{An optional string value for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.}
 
-\item{eigen}{An optional logical value. Only valid when dense=FALSE. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
-
 \item{score}{An optional logical value indicating whether to perform a score test. Default is FALSE.}
-
-\item{dense}{An optional logical value indicating whether the relatedness matrix is dense. Default is FALSE.}
 
 \item{threshold}{An optional non-negative value. If threshold>0, coxmeg_m will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.}
 
@@ -50,11 +47,9 @@ coxmeg_plink(pheno, corr, bed = NULL, tmp_dir = NULL,
 
 \item{spd}{An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. See details.}
 
-\item{mc}{An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.}
+\item{mc}{An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when \code{dense=TRUE} and \code{detap='slq'}. Default is 100.}
 
 \item{verbose}{An optional logical value indicating whether to print additional messages. Default is TRUE.}
-
-\item{invchol}{An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.}
 }
 \value{
 beta: The estimated coefficient for each predictor in X.
@@ -96,12 +91,12 @@ When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is
 
 \section{About \code{solver}}{
 
-When \code{solver=1} (\code{solver=2}), Cholesky decompositon (PCG) is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
+When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems. When \code{type='dense'}, it is recommended to set \code{solver=2} to have better computational performance.
 }
 
-\section{About \code{invchol}}{
+\section{About \code{detap}}{
 
-Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used.
+When \code{detap='exact'}, the exact log-determinant is computed for estimating the variance component. Specifying \code{detap='diagonal'} uses diagonal approximation, and is only effective for a sparse relatedness matrix. Specifying \code{detap='slq'} uses stochastic lanczos quadrature approximation.
 }
 
 \examples{
@@ -126,7 +121,8 @@ pheno = system.file("extdata", "ex_pheno.txt", package = "coxmeg")
 cov = system.file("extdata", "ex_cov.txt", package = "coxmeg")
 bed = system.file("extdata", "example_null.bed", package = "coxmeg")
 bed = substr(bed,1,nchar(bed)-4)
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=FALSE)
+re = coxmeg_plink(pheno,sigma,type='bd',bed=bed,tmp_dir=tempdir(),cov_file=cov,
+detap='diagonal',order=1)
 re
 }
 \keyword{Cox}

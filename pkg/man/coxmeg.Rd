@@ -4,15 +4,17 @@
 \alias{coxmeg}
 \title{Fit a Cox mixed-effects model}
 \usage{
-coxmeg(outcome, corr, X = NULL, FID = NULL, eps = 1e-06,
-  min_tau = 1e-04, max_tau = 5, order = 1, detap = TRUE,
-  opt = "bobyqa", eigen = TRUE, dense = FALSE, solver = 1,
-  spd = TRUE, verbose = TRUE, mc = 100, invchol = TRUE)
+coxmeg(outcome, corr, type, X = NULL, FID = NULL, eps = 1e-06,
+  min_tau = 1e-04, max_tau = 5, order = 1, detap = NULL,
+  opt = "bobyqa", solver = NULL, spd = TRUE, verbose = TRUE,
+  mc = 100)
 }
 \arguments{
 \item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for events / 0 for censored).}
 
 \item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
+
+\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.}
 
 \item{X}{An optional matrix of the preidctors with fixed effects. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
 
@@ -26,23 +28,17 @@ coxmeg(outcome, corr, X = NULL, FID = NULL, eps = 1e-06,
 
 \item{order}{An optional integer scalar starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.}
 
-\item{detap}{An optional logical scalar indicating whether to use approximation for log-determinant. Default is TRUE.}
+\item{detap}{An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.}
 
 \item{opt}{An optional logical scalar for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.}
 
-\item{eigen}{An optional logical scalar. Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
-
-\item{dense}{An optional logical scalar indicating whether the relatedness matrix is dense. Default is FALSE.}
-
-\item{solver}{An optional bianry scalar taking either 1 or 2. Default is 1. See details.}
+\item{solver}{An optional bianry value that can be either 1 (Cholesky Decomposition using RcppEigen), 2 (PCG) or 3 (Cholesky Decomposition using Matrix). Default is NULL, which lets the function select a solver. See details.}
 
 \item{spd}{An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. See details.}
 
 \item{verbose}{An optional logical scalar indicating whether to print additional messages. Default is TRUE.}
 
-\item{mc}{An optional integer scalar specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.}
-
-\item{invchol}{An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.}
+\item{mc}{An optional integer scalar specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when \code{dense=TRUE} and \code{detap='slq'}. Default is 100.}
 }
 \value{
 beta: The estimated coefficient for each predictor in X.
@@ -71,12 +67,12 @@ When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is
 
 \section{About \code{solver}}{
 
-When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
+When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems. When \code{type='dense'}, it is recommended to set \code{solver=2} to have better computational performance.
 }
 
-\section{About \code{invchol}}{
+\section{About \code{detap}}{
 
-Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used.
+When \code{detap='exact'}, the exact log-determinant is computed for estimating the variance component. Specifying \code{detap='diagonal'} uses diagonal approximation, and is only effective for a sparse relatedness matrix. Specifying \code{detap='slq'} uses stochastic lanczos quadrature approximation.
 }
 
 \examples{
@@ -107,7 +103,7 @@ ycen <- pmin(y, cen)
 outcome <- cbind(ycen,as.numeric(y <= cen))
 
 ## fit a Cox mixed-effects model
-re = coxmeg(outcome,sigma,order=1,eigen=TRUE,dense=FALSE)
+re = coxmeg(outcome,sigma,type='bd',detap='diagonal',order=1)
 re
 }
 \keyword{Cox}

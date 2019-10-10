@@ -211,3 +211,71 @@ double logdet_lanczos(const Eigen::MatrixXd & X_m, const Eigen::MatrixXd & rad_m
   return logdet*n/t;
 }
 
+// [[Rcpp::export]]
+double logdet_lanczos_sp(const Eigen::SparseMatrix<double> & X_m, const Eigen::MatrixXd & rad_m, const Eigen::VectorXi & m_d) {
+  
+  int t = rad_m.cols();
+  int n = rad_m.rows();
+  int m = m_d[0];
+  
+  double logdet = 0;
+  
+  Eigen::MatrixXd v1;
+  Eigen::MatrixXd v2;
+  Eigen::ArrayXXd w(n,t);
+  Eigen::ArrayXXd alpha(m,t);
+  Eigen::ArrayXXd beta(m-1,t);
+  Eigen::ArrayXXd temp(n,t);
+  Eigen::MatrixXd T;
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es;
+  
+  v1 = rad_m;
+  w = X_m*v1;
+  temp = w*v1.array();
+  alpha.row(0) = temp.colwise().sum();
+  w = w - v1.array().rowwise()*alpha.row(0);
+  
+  Eigen::VectorXd iter(t);
+  iter.fill(m);
+  for(int j=1;j<m;j++)
+  {
+    temp = w*w;
+    beta.row(j-1) = sqrt(temp.colwise().sum());
+    
+    for(int k=0;k<t;k++)
+    {
+      if(beta(j-1,k)<1e-10)
+      {
+        if(iter(k)==m)
+          iter(k) = j;
+      }
+    }
+    
+    v2 = w.rowwise()*beta.row(j-1).inverse();
+    
+    w = X_m*v2;
+    temp = w*v2.array();
+    alpha.row(j) = temp.colwise().sum();
+    w = w - v2.array().rowwise()*alpha.row(j) - v1.array().rowwise()*beta.row(j-1);
+    v1 = v2;
+  }
+  
+  for(int i = 0; i<t; i++)
+  { 
+    int it = iter(i);
+    T = Eigen::MatrixXd::Zero(it,it);
+    T.diagonal() = alpha.col(i).head(it);
+    if(it>1)
+    {
+      T.diagonal(1) = beta.col(i).head(it-1);
+      T.diagonal(-1) = beta.col(i).head(it-1);
+    }
+    es.compute(T);
+    Eigen::ArrayXd eivt = Eigen::square(es.eigenvectors().row(0).array());
+    Eigen::ArrayXd eivl = Eigen::log(es.eigenvalues().array());
+    eivl = eivt*eivl;
+    logdet = logdet + eivl.sum();
+  }
+  
+  return logdet*n/t;
+}

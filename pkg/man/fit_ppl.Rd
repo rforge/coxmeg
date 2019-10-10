@@ -4,9 +4,8 @@
 \alias{fit_ppl}
 \title{Estimate HRs using PPL given a known variance component (tau)}
 \usage{
-fit_ppl(X, outcome, corr, tau = 0.5, FID = NULL, eps = 1e-06,
-  order = 1, eigen = TRUE, dense = FALSE, solver = 1, spd = TRUE,
-  verbose = TRUE, invchol = TRUE)
+fit_ppl(X, outcome, corr, type, tau = 0.5, FID = NULL, eps = 1e-06,
+  order = 1, solver = NULL, spd = TRUE, verbose = TRUE)
 }
 \arguments{
 \item{X}{A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
@@ -14,6 +13,8 @@ fit_ppl(X, outcome, corr, tau = 0.5, FID = NULL, eps = 1e-06,
 \item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for failure / 0 for censored).}
 
 \item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
+
+\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.}
 
 \item{tau}{A positive scalar. A variance component given by the user. Default is 0.5.}
 
@@ -23,17 +24,11 @@ fit_ppl(X, outcome, corr, tau = 0.5, FID = NULL, eps = 1e-06,
 
 \item{order}{An optional integer value starting from 0. Only valid when dense=FALSE. It specifies the order of approximation used in the inexact newton method. Default is 1.}
 
-\item{eigen}{An optional logical value Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
-
-\item{dense}{An optional logical value indicating whether the relatedness matrix is dense. Default is FALSE.}
-
-\item{solver}{An optional bianry value taking either 1 or 2. Default is 1. See details.}
+\item{solver}{An optional bianry value that can be either 1 (Cholesky Decomposition using RcppEigen), 2 (PCG) or 3 (Cholesky Decomposition using Matrix). Default is NULL, which lets the function select a solver. See details.}
 
 \item{spd}{An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE.}
 
 \item{verbose}{An optional logical value indicating whether to print additional messages. Default is TRUE.}
-
-\item{invchol}{An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.}
 }
 \value{
 beta: The estimated coefficient for each predictor in X.
@@ -51,12 +46,7 @@ ppl: The PPL when the convergence is reached.
 }
 \section{About \code{solver}}{
 
-When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}.
-}
-
-\section{About \code{invchol}}{
-
-Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used.
+When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems.
 }
 
 \examples{
@@ -87,7 +77,7 @@ ycen <- pmin(y, cen)
 outcome <- cbind(ycen,as.numeric(y <= cen))
 
 ## fit the ppl
-re = fit_ppl(x,outcome,sigma,tau=0.5,order=1,eigen=TRUE,dense=FALSE)
+re = fit_ppl(x,outcome,sigma,type='bd',tau=0.5,order=1)
 re
 }
 \keyword{Cox}

@@ -4,11 +4,10 @@
 \alias{coxmeg_m}
 \title{Fit a Cox mixed-effects model for estimating HRs for a set of predictors}
 \usage{
-coxmeg_m(X, outcome, corr, FID = NULL, cov = NULL, tau = NULL,
+coxmeg_m(X, outcome, corr, type, FID = NULL, cov = NULL, tau = NULL,
   min_tau = 1e-04, max_tau = 5, eps = 1e-06, order = 1,
-  detap = TRUE, opt = "bobyqa", eigen = TRUE, score = FALSE,
-  dense = FALSE, threshold = 0, solver = 1, spd = TRUE,
-  verbose = TRUE, mc = 100, invchol = TRUE)
+  detap = NULL, opt = "bobyqa", score = FALSE, threshold = 0,
+  solver = NULL, spd = TRUE, verbose = TRUE, mc = 100)
 }
 \arguments{
 \item{X}{A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
@@ -16,6 +15,8 @@ coxmeg_m(X, outcome, corr, FID = NULL, cov = NULL, tau = NULL,
 \item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for failure / 0 for censored).}
 
 \item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
+
+\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.}
 
 \item{FID}{An optional string vector of family ID. If provided, the data will be reordered according to the family ID.}
 
@@ -31,27 +32,21 @@ coxmeg_m(X, outcome, corr, FID = NULL, cov = NULL, tau = NULL,
 
 \item{order}{An optional integer value starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.}
 
-\item{detap}{An optional logical value indicating whether to use approximation for log-determinant. Default is TRUE.}
+\item{detap}{An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.}
 
 \item{opt}{An optional logical value for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.}
 
-\item{eigen}{An optional logical value. Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.}
-
 \item{score}{An optional logical value indicating whether to perform a score test. Default is FALSE.}
-
-\item{dense}{An optional logical value indicating whether the relatedness matrix is dense. Default is FALSE.}
 
 \item{threshold}{An optional non-negative value. If threshold>0, coxmeg_m will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.}
 
-\item{solver}{An optional bianry value taking either 1 or 2. Default is 1. See details.}
+\item{solver}{An optional bianry value that can be either 1 (Cholesky Decomposition using RcppEigen), 2 (PCG) or 3 (Cholesky Decomposition using Matrix). Default is NULL, which lets the function select a solver. See details.}
 
 \item{spd}{An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. See details.}
 
 \item{verbose}{An optional logical value indicating whether to print additional messages. Default is TRUE.}
 
-\item{mc}{An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when dense=TRUE and detap=TRUE. Default is 100.}
-
-\item{invchol}{An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.}
+\item{mc}{An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when \code{dense=TRUE} and \code{detap='slq'}. Default is 100.}
 }
 \value{
 beta: The estimated coefficient for each predictor in X.
@@ -76,12 +71,12 @@ When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is
 
 \section{About \code{solver}}{
 
-When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. When \code{dense=TRUE}, it is recommended to set \code{solver=2} to have better computational performance.
+When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems. When \code{type='dense'}, it is recommended to set \code{solver=2} to have better computational performance.
 }
 
-\section{About \code{invchol}}{
+\section{About \code{detap}}{
 
-Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used.
+When \code{detap='exact'}, the exact log-determinant is computed for estimating the variance component. Specifying \code{detap='diagonal'} uses diagonal approximation, and is only effective for a sparse relatedness matrix. Specifying \code{detap='slq'} uses stochastic lanczos quadrature approximation.
 }
 
 \examples{
@@ -116,7 +111,7 @@ g = matrix(rbinom(n*5,2,0.5),n,5)
 
 ## The following command will first estimate the variance component without g, 
 ## and then use it to estimate the HR for each preditor in g.
-re = coxmeg_m(g,outcome,sigma,tau=0.5,order=1,eigen=TRUE,dense=FALSE)
+re = coxmeg_m(g,outcome,sigma,type='bd',tau=0.5,detap='diagonal',order=1)
 re
 }
 \keyword{Cox}

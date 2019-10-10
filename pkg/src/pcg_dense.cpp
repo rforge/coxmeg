@@ -17,13 +17,13 @@ typedef Eigen::SparseMatrix<double> SpMat;
 // available from R
 //
 // [[Rcpp::export]]
-Eigen::VectorXd pcg_dense(const Eigen::MatrixXd & A, const Eigen::MatrixXd & B, const double tol) {
+Eigen::MatrixXd pcg_dense(const Eigen::MatrixXd & A, const Eigen::MatrixXd & B, const double tol) {
 
   
   Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper> cg;
   cg.setTolerance(tol);
   cg.compute(A);
-  Eigen::VectorXd x = cg.solve(B);
+  Eigen::MatrixXd x = cg.solve(B);
   
   return x;
 }

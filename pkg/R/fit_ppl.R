@@ -4,23 +4,19 @@
 #' \code{fit_ppl} returns estimates of HRs and their p-values given a known variance component (tau).
 #' 
 #' @section About \code{solver}:
-#' When solver=1/solver=2, Cholesky decompositon/PCG is used to solve the linear system. However, when \code{dense=FALSE} and \code{eigen=FALSE}, the solve function in the Matrix package is used regardless of \code{solver}. 
-#' @section About \code{invchol}:
-#' Cholesky decomposition using \code{invchol=TRUE} is generally (but not always) much faster to invert a relatedness matrix (e.g., a block-diagonal matrix). But for some types of sparse matrices (e.g., a banded AR(1) matrix with rho=0.9), it sometimes can be very slow. In such cases, \code{invchol=FALSE} is can be used. 
+#' When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems. 
 #' 
 #' @param tau A positive scalar. A variance component given by the user. Default is 0.5.
 #' @param X A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.
 #' @param outcome A matrix contains time (first column) and status (second column). The status is a binary variable (1 for failure / 0 for censored).
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
+#' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.
 #' @param FID An optional string vector of family ID. If provided, the data will be reordered according to the family ID.
 #' @param eps An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.
-#' @param dense An optional logical value indicating whether the relatedness matrix is dense. Default is FALSE.
 #' @param spd An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. 
-#' @param solver An optional bianry value taking either 1 or 2. Default is 1. See details.
+#' @param solver An optional bianry value that can be either 1 (Cholesky Decomposition using RcppEigen), 2 (PCG) or 3 (Cholesky Decomposition using Matrix). Default is NULL, which lets the function select a solver. See details.
 #' @param verbose An optional logical value indicating whether to print additional messages. Default is TRUE.
 #' @param order An optional integer value starting from 0. Only valid when dense=FALSE. It specifies the order of approximation used in the inexact newton method. Default is 1.
-#' @param eigen An optional logical value Only effective when \code{dense=FALSE}. It indicates whether to use RcppEigen:LDLT to solve linear systems. Default is TRUE.
-#' @param invchol An optional logical value. Only effective when \code{dense=FALSE}. If TRUE, sparse Cholesky decomposition is used to compute the inverse of the relatedness matrix. Otherwise, sparse LU is used.
 #' @return beta: The estimated coefficient for each predictor in X.
 #' @return HR: The estimated HR for each predictor in X.
 #' @return sd_beta: The estimated standard error of beta.
@@ -56,13 +52,16 @@
 #' outcome <- cbind(ycen,as.numeric(y <= cen))
 #' 
 #' ## fit the ppl
-#' re = fit_ppl(x,outcome,sigma,tau=0.5,order=1,eigen=TRUE,dense=FALSE)
+#' re = fit_ppl(x,outcome,sigma,type='bd',tau=0.5,order=1)
 #' re
 
-fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE,dense=FALSE,solver=1,spd=TRUE,verbose=TRUE,invchol=TRUE){
+fit_ppl <- function(X,outcome,corr,type,tau=0.5,FID=NULL,eps=1e-06,order=1,solver=NULL,spd=TRUE,verbose=TRUE){
 
   if(eps<0)
   {eps <- 1e-06}
+  
+  if(!(type %in% c('bd','sparse','dense')))
+  {stop("The type argument should be 'bd', 'sparse' or 'dense'.")}
   
   ## family structure
   if(is.null(FID)==FALSE)
@@ -119,11 +118,6 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
   rs <- rs_sum(rk-1,d_v[ind[,1]])
   if(spd==FALSE)
   {
-    # minei = eigs_sym(corr, 1, which = "SM")
-    # if(minei$values < -1e-10)
-    # {
-    #  stop(paste0("The relatedness matrix has negative eigenvalues (", minei$values,")."))
-    # }
     if(max(colSums(corr))<1e-10)
     {
       stop("The relatedness matrix has a zero eigenvalue with an eigenvector of 1s.")
@@ -143,11 +137,12 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
   }
   
   nz <- nnzero(corr)
-  sparsity = -1
   if(nz>(n*n/2))
-  {dense <- TRUE}
+  {type <- 'dense'}
+  inv = NULL
   
-  if(dense==TRUE)
+  eigen = TRUE
+  if(type=='dense')
   {
     if(verbose==TRUE)
     {message('The relatedness matrix is treated as dense.')}
@@ -163,25 +158,33 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
     sigma_i_s = corr
     corr <- s_d <- NULL
     si_d <- as.vector(diag(sigma_i_s))
-    res <- irls_ex(beta, u, tau, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,det=FALSE,detap=FALSE,sigma_s=NULL,s_d=NULL,eigen=eigen,solver=solver)
+    
+    if(is.null(solver))
+    {solver = 2}else{
+      if(solver==3)
+      {solver = 1}
+    }
+    
   }else{
     
     if(verbose==TRUE)
-    {message('The covariance matrix is treated as sparse.')}
+    {message('The relatedness matrix is treated as sparse.')}
     
     corr <- as(corr, 'dgCMatrix')
-    # if(eigen==FALSE)
-    # {
-    #  corr <- as(corr, 'symmetricMatrix')
-    #}
-  
+    si_d = s_d = NULL
+    
     if(spsd==FALSE)
     {
-      if(invchol==TRUE)
+      if(type=='bd')
       {
         sigma_i_s <- Matrix::chol2inv(Matrix::chol(corr))
+        inv = TRUE
+        si_d <- as.vector(Matrix::diag(sigma_i_s))
       }else{
-        sigma_i_s <- Matrix::solve(corr)
+        sigma_i_s = NULL
+        inv = FALSE
+        s_d <- as.vector(Matrix::diag(corr))
+        
       }
     }else{
       sigma_i_s = eigen(corr)
@@ -190,33 +193,72 @@ fit_ppl <- function(X,outcome,corr,tau=0.5,FID=NULL,eps=1e-06,order=1,eigen=TRUE
         stop("The relatedness matrix has negative eigenvalues.")
       }
       sigma_i_s = sigma_i_s$vectors%*%(c(1/sigma_i_s$values[1:rk_cor],rep(0,n-rk_cor))*t(sigma_i_s$vectors))
-    }
-    
-    nz_i <- nnzero(sigma_i_s)
-    si_d <- NULL
-    sparsity = nz_i/nz
-    if((nz_i>nz)&&(spsd==FALSE))
-    {
-      inv <- FALSE
-      s_d <- as.vector(Matrix::diag(corr))
-    }else{
-      inv <- TRUE
+      inv = TRUE
       si_d <- as.vector(Matrix::diag(sigma_i_s))
     }
     
-    sigma_i_s <- as(sigma_i_s,'dgCMatrix')
-    if(eigen==FALSE)
+    if(is.null(solver))
     {
-      sigma_i_s = Matrix::forceSymmetric(sigma_i_s)
+      if(type=='bd')
+      {
+        solver = 1
+        if(n>5e4)
+        {
+          eigen = FALSE
+        }
+      }else{solver = 2}
+    }else{
+      if(solver==3)
+      {
+        eigen = FALSE
+        solver = 1
+      }
     }
     
     if(inv==TRUE)
-    {corr <- s_d <- NULL}
-    res <- irls_fast_ap(beta, u, tau, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,order,det=FALSE,detap=TRUE,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver,sparsity=sparsity)
-    
+    {
+      sigma_i_s <- as(sigma_i_s,'dgCMatrix')
+      if(eigen==FALSE)
+      {
+        sigma_i_s = Matrix::forceSymmetric(sigma_i_s)
+      }
+      corr <- s_d <- NULL
+    }
   }
   
-  re = list(beta=res$beta,HR=exp(res$beta),sd_beta=sqrt(diag(as.matrix(res$v11))),iter=res$iter,ppl=res$ll)
+  if(verbose==TRUE)
+  {
+    if(inv==TRUE)
+    {message('The relatedness matrix is inverted.')}
+    
+    if(type=='dense')
+    {
+      switch(
+        solver,
+        '1' = message('Solver: solve (base).'),
+        '2' = message('Solver: PCG (RcppEigen:dense).')
+      )
+    }else{
+      switch(
+        solver,
+        '1' = message('Solver: Cholesky decomposition (RcppEigen=',eigen,').'),
+        '2' = message('Solver: PCG (RcppEigen:sparse).')
+      )
+    }
+  }
+  
+  if(type=='dense')
+  {
+    res <- irls_ex(beta, u, tau, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,det=FALSE,detap='exact',solver=solver)
+  }else{
+    res <- irls_fast_ap(beta, u, tau, si_d, sigma_i_s, X, eps, d_v, ind, rs$rs_rs, rs$rs_cs,rs$rs_cs_p,order,det=FALSE,detap='exact',sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver)
+  }
+  
+  res_beta = as.vector(res$beta)
+  res_var = diag(as.matrix(res$v11))
+  p = pchisq(res_beta^2/res_var,1,lower.tail=FALSE)
+  
+  re = list(beta=res_beta,HR=exp(res_beta),sd_beta=sqrt(res_var),p=as.vector(p),iter=res$iter,ppl=res$ll)
   return(re)
 }
 

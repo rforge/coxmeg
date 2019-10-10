@@ -1,6 +1,6 @@
 
 
-irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, rs_cs, rs_cs_p, order=1,det=FALSE,detap=TRUE,sigma_s=NULL,s_d=NULL,eigen=TRUE,solver=1,sparsity=-1)
+irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs_rs, rs_cs, rs_cs_p, order=1,det=FALSE,detap='diagonal',sigma_s=NULL,s_d=NULL,eigen=TRUE,solver=1,rad=NULL)
 {
   n <- length(u)
   n_c <- length(beta)
@@ -27,7 +27,7 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
   s <- as.vector(cswei(w_v,rs_rs,ind-1,1))
   loglik <- newloglik <- 0
   
-  if((inv==FALSE)&(sparsity>50))
+  if(inv==FALSE)
   {
     siu = as.vector(pcg_sparse(sigma_s,as.matrix(u_new),eps*1e-3)) 
   }else{
@@ -49,6 +49,7 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
   
   while(((lik_dif>eps_s)||(iter<1))&&(iter<maxiter))
   {
+    damp = 1
     loglik <- newloglik
     a_v <- d_v/s
     bw_v <- w_v*as.vector(cswei(a_v,rs_cs,ind-1,0))
@@ -131,7 +132,7 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
     s <- as.vector(cswei(w_v,rs_rs,ind-1,1))
     
     # siu <- as.vector(sigma_i_s%*%u_new)
-    if((inv==FALSE)&(sparsity>50))
+    if(inv==FALSE)
     {
       siu = as.vector(pcg_sparse(sigma_s,as.matrix(u_new),eps*1e-3)) 
     }else{
@@ -140,11 +141,40 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
     usiu <- Matrix::t(u_new)%*%siu
     newloglik <- sum(eta_v[n1_ind]) - sum(log(s)[n1_ind]) - 0.5*usiu/tau
     lik_dif <- as.numeric(newloglik) - as.numeric(loglik)
-    
-    if(lik_dif<0)
-    {lik_dif = (-1)*lik_dif}
-    # eps_s = tau*eps*(-1)*loglik
     eps_s = eps*(-1)*as.numeric(loglik)
+    
+    while(lik_dif<(-eps_s))
+    {
+      damp = damp/2
+      if(damp<1e-2)
+      {
+        warning(paste0("The optimization of PPL may not converge."))
+        lik_dif = 0
+        break
+      }
+      
+      u_new <- u_new - damp*new_z
+      if(n_c>0)
+      {
+        beta_new <- beta_new - damp*new_x
+        eta_v <- X%*%beta_new+u_new
+      }else{
+        eta_v <- u_new
+      }
+      
+      w_v <- as.vector(exp(eta_v))
+      s <- as.vector(cswei(w_v,rs_rs,ind-1,1))
+      if(inv==FALSE)
+      {
+        siu = as.vector(pcg_sparse(sigma_s,as.matrix(u_new),eps*1e-3)) 
+      }else{
+        siu = as.vector(sigma_i_s%*%u_new)
+      }
+      usiu <- Matrix::t(u_new)%*%siu
+      newloglik <- sum(eta_v[n1_ind]) - sum(log(s)[n1_ind]) - 0.5*usiu/tau
+      lik_dif <- as.numeric(newloglik - loglik)
+    }
+    
     iter <- iter + 1
   }
   
@@ -216,7 +246,7 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
     a_v_p <- a_v[ind[,1]]
     a_v_p <- a_v_p[a_v_p>0]
     
-    if(detap==TRUE)
+    if(detap=='diagonal')
     {
       if(eigen==TRUE)
       {
@@ -244,7 +274,29 @@ irls_fast_ap <- function(beta, u, tau,si_d, sigma_i_s, X, eps=1e-6, d_v, ind, rs
         }
       }
     }else{
+      if(detap=='exact')
+      {
         logdet <- logdeth(as(sigma_i_s,'dgCMatrix'),si_d,bw_v, w_v,rs_cs_p-1,ind-1,a_v_p,tau,1,0)
+      }else{
+        wv2 <- w_v*w_v
+        avp2 <- a_v_p*a_v_p
+        qd <- sapply(1:n, function(x) wv2[x]*sum(avp2[1:rs_cs_p[ind[x,2]]]))
+        
+        if(inv==TRUE)
+        {
+          v = sigma_i_s/tau
+          diag(v) = diag(v) + bw_v - qd
+          v = v*tau
+          logdet = logdet_lanczos_sp(as(v,'dgCMatrix'), rad, 8) - n*log(tau)
+        }else{
+          dd <- bw_v - qd
+          v = sigma_s%*%Diagonal(n,dd)
+          diag(v) = diag(v) + 1/tau
+          v = v%*%t(v)
+          logdet = logdet_lanczos_sp(as(v,'dgCMatrix'), rad, 8)/2
+        }
+      }
+        
     }
     
   }

@@ -40,7 +40,7 @@ sigma[1:5,1:5]
 
 
 ## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg(outcome,sigma,pred,order=1,dense=FALSE)
+re = coxmeg(outcome,sigma,type='bd',X=pred,order=1,detap='diagonal')
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
@@ -71,31 +71,29 @@ for(i in 1:n_f)
 }
 sigma <- as.matrix(bdiag(mat_list))
 
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
+re = coxmeg_plink(pheno,sigma,type='bd',bed=bed,tmp_dir=tempdir(),cov_file=cov,verbose=FALSE)
 re
 
-## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg_plink(pheno,sigma,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
-re
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE)
-re
+## ----eval=FALSE----------------------------------------------------------
+#  re = coxmeg_plink(pheno,sigma,type='bd',cov_file=cov,verbose=FALSE)
+#  re = coxmeg_plink(pheno,sigma,type='bd',bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,verbose=FALSE)
 
 ## ----echo=TRUE-----------------------------------------------------------
 geno = matrix(rbinom(nrow(sigma)*10,2,runif(nrow(sigma)*10,0.05,0.5)),nrow(sigma),10)
 pheno_m = read.table(pheno)
-re = coxmeg_m(geno,pheno_m[,3:4],sigma,detap=TRUE,dense=FALSE,verbose=FALSE)
+re = coxmeg_m(geno,pheno_m[,3:4],sigma,type='bd',verbose=FALSE)
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,solver=2)
+re = coxmeg_plink(pheno,sigma,type='dense',bed=bed,tmp_dir=tempdir(),cov_file=cov,detap='slq',verbose=FALSE,solver=2)
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
-re = coxmeg_plink(pheno,sigma,bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,detap=TRUE,dense=TRUE,verbose=FALSE,solver=2,score=TRUE)
+re = coxmeg_plink(pheno,sigma,type='dense',bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,detap='slq',verbose=FALSE,solver=2,score=TRUE)
 re
 
 ## ----echo=TRUE-----------------------------------------------------------
 sigma[2,1] = sigma[1,2] = 1
-re = coxmeg_plink(pheno,sigma,cov_file=cov,detap=TRUE,dense=FALSE,verbose=FALSE,spd=FALSE)
+re = coxmeg_plink(pheno,sigma,type='bd',cov_file=cov,verbose=FALSE,spd=FALSE)
 re
 
