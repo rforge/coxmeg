@@ -2,7 +2,7 @@ Package: coxmeg
 Type: Package
 Title: Cox Mixed-Effects Model for Genome-Wide Association Studies
 Version: 1.0.8
-Date: 2019-09-05
+Date: 2019-10-12
 Author: Liang He
 Maintainer: Liang He <liang.he@duke.edu>
 Description: Fast algorithms for fitting a Cox mixed-effects model for e.g., genome-wide association studies. See Liang He and Alexander Kulminski (2019) <doi:10.1101/729285>.
