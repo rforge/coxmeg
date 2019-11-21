@@ -3,15 +3,18 @@
 #'
 #' \code{coxmeg} returns estimates of the variance component, the HRs and p-values for the predictors.
 #' 
+#' @section About \code{type}:
+#' 'bd' is used for a block-diagonal relatedness matrix, or a sparse matrix the inverse of which is also sparse. 'sparse' is used for a general sparse relatedness matrix the inverse of which is not sparse. 
 #' @section About \code{spd}:
 #' When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, use \code{spd=FALSE}.
 #' @section About \code{solver}:
 #' When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems. When \code{type='dense'}, it is recommended to set \code{solver=2} to have better computational performance. 
 #' @section About \code{detap}:
 #' When \code{detap='exact'}, the exact log-determinant is computed for estimating the variance component. Specifying \code{detap='diagonal'} uses diagonal approximation, and is only effective for a sparse relatedness matrix. Specifying \code{detap='slq'} uses stochastic lanczos quadrature approximation.   
+#' 
 #' @param outcome A matrix contains time (first column) and status (second column). The status is a binary variable (1 for events / 0 for censored).
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
-#' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.
+#' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.
 #' @param X An optional matrix of the preidctors with fixed effects. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns. 
 #' @param FID An optional string vector of family ID. If provided, the data will be reordered according to the family ID.
 #' @param eps An optional positive scalar indicating the tolerance in the optimization algorithm. Default is 1e-6.
@@ -21,12 +24,13 @@
 #' @param spd An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. See details.
 #' @param detap An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.
 #' @param solver An optional bianry value that can be either 1 (Cholesky Decomposition using RcppEigen), 2 (PCG) or 3 (Cholesky Decomposition using Matrix). Default is NULL, which lets the function select a solver. See details.
-#' @param order An optional integer scalar starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.
+#' @param order An optional integer starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.
 #' @param verbose An optional logical scalar indicating whether to print additional messages. Default is TRUE.
 #' @param mc An optional integer scalar specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when \code{dense=TRUE} and \code{detap='slq'}. Default is 100.
 #' @return beta: The estimated coefficient for each predictor in X.
 #' @return HR: The estimated HR for each predictor in X.
 #' @return sd_beta: The estimated standard error of beta.
+#' @return p: The p-value.
 #' @return iter: The number of iterations until convergence.
 #' @return tau: The estimated variance component.
 #' @return int_ll: The marginal likelihood (-2*log(lik)) of tau evaluated at the estimate of tau.

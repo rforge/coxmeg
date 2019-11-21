@@ -10,7 +10,7 @@ vignette: >
 ---
 
 ```{r, message=FALSE, warning=FALSE,echo=FALSE}
-library(knitcitations)
+# library(knitcitations)
 # cleanbib()
 # options("citation_format" = "pandoc")
 # r<-citep("10.1101/729285")
@@ -77,7 +77,7 @@ sigma[1:5,1:5]
 
 ```
 
-We fit a Cox mixed-effects model using the ```coxmeg``` function. We set ```type='bd'``` to indicate that the relatedness matrix is a block-diagonal matrix. However, the function will automatically treat it as dense if there are more than 50% non-zero elements in the matrix. Note that ```type='bd'``` should be used only for a block-diagonal matrix or a sparse matrix of which its inverse matrix is also sparse. For a general sparse relatedness matrix of which its inverse is not sparse, ```type='sparse'``` should be used. When ```type='sparse'``` is specified, the relatedness matrix will not be inverted during the estimation procedure. 
+We fit a Cox mixed-effects model using the ```coxmeg``` function. Here, we set ```type='bd'``` because the relatedness matrix is a block-diagonal matrix. Note that ```type='bd'``` should be used only for a block-diagonal matrix or a sparse matrix of which its inverse matrix is also sparse. For a general sparse relatedness matrix of which its inverse is not sparse, it is recommended that ```type='sparse'``` be used. When ```type='sparse'``` is specified, the relatedness matrix will not be inverted during the estimation procedure. The function will automatically treat the relatedness matrix as dense if there are more than 50% non-zero elements in the matrix. 
 
 
 ```{r,echo=TRUE}
@@ -149,6 +149,7 @@ re = coxmeg_m(geno,pheno_m[,3:4],sigma,type='bd',verbose=FALSE)
 re
 ```
 
+By default, ```coxmeg_m``` and ```coxmeg_plink``` will choose an optimal ```order``` between 1 and 10 for analyzing the SNPs when ```order``` is not specified. 
 
 ## Perform GWAS of an age-at-onset phenotype with a dense relatedness matrix
 

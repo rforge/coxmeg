@@ -3,6 +3,8 @@
 #'
 #' \code{fit_ppl} returns estimates of HRs and their p-values given a known variance component (tau).
 #' 
+#' @section About \code{type}:
+#' 'bd' is used for a block-diagonal relatedness matrix, or a sparse matrix the inverse of which is also sparse. 'sparse' is used for a general sparse relatedness matrix the inverse of which is not sparse. 
 #' @section About \code{solver}:
 #' When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems. 
 #' 
@@ -10,7 +12,7 @@
 #' @param X A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.
 #' @param outcome A matrix contains time (first column) and status (second column). The status is a binary variable (1 for failure / 0 for censored).
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
-#' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.
+#' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.
 #' @param FID An optional string vector of family ID. If provided, the data will be reordered according to the family ID.
 #' @param eps An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.
 #' @param spd An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. 
@@ -20,6 +22,7 @@
 #' @return beta: The estimated coefficient for each predictor in X.
 #' @return HR: The estimated HR for each predictor in X.
 #' @return sd_beta: The estimated standard error of beta.
+#' @return p: The p-value.
 #' @return iter: The number of iterations until convergence.
 #' @return ppl: The PPL when the convergence is reached.
 #' @keywords Cox mixed-effects model

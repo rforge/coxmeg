@@ -6,7 +6,7 @@
 \usage{
 coxmeg_plink(pheno, corr, type, bed = NULL, tmp_dir = NULL,
   cov_file = NULL, tau = NULL, maf = 0.05, min_tau = 1e-04,
-  max_tau = 5, eps = 1e-06, order = 1, detap = NULL,
+  max_tau = 5, eps = 1e-06, order = NULL, detap = NULL,
   opt = "bobyqa", score = FALSE, threshold = 0, solver = NULL,
   spd = TRUE, mc = 100, verbose = TRUE)
 }
@@ -15,7 +15,7 @@ coxmeg_plink(pheno, corr, type, bed = NULL, tmp_dir = NULL,
 
 \item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
 
-\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.}
+\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.}
 
 \item{bed}{A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.}
 
@@ -33,7 +33,7 @@ coxmeg_plink(pheno, corr, type, bed = NULL, tmp_dir = NULL,
 
 \item{eps}{An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.}
 
-\item{order}{An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.}
+\item{order}{An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is NULL, which lets coxmeg choose an optimal order.}
 
 \item{detap}{An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.}
 
@@ -69,6 +69,11 @@ nsam: Actual sample size.
 \description{
 \code{coxmeg_plink} first estimates the variance component under a null model with only cov if tau is not given, and then analyzing each SNP in the plink files.
 }
+\section{About \code{type}}{
+
+'bd' is used for a block-diagonal relatedness matrix, or a sparse matrix the inverse of which is also sparse. 'sparse' is used for a general sparse relatedness matrix the inverse of which is not sparse.
+}
+
 \section{About \code{corr}}{
 
 The subjects in \code{corr} must be in the same order as in the plink fam file.

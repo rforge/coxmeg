@@ -14,7 +14,7 @@ coxmeg(outcome, corr, type, X = NULL, FID = NULL, eps = 1e-06,
 
 \item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
 
-\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.}
+\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.}
 
 \item{X}{An optional matrix of the preidctors with fixed effects. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
 
@@ -26,7 +26,7 @@ coxmeg(outcome, corr, type, X = NULL, FID = NULL, eps = 1e-06,
 
 \item{max_tau}{An optional positive scalar indicating the upper bound in the optimization algorithm for the variance component \code{tau} Default is 5.}
 
-\item{order}{An optional integer scalar starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.}
+\item{order}{An optional integer starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is 1.}
 
 \item{detap}{An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.}
 
@@ -47,6 +47,8 @@ HR: The estimated HR for each predictor in X.
 
 sd_beta: The estimated standard error of beta.
 
+p: The p-value.
+
 iter: The number of iterations until convergence.
 
 tau: The estimated variance component.
@@ -60,6 +62,11 @@ nsam: Actual sample size.
 \description{
 \code{coxmeg} returns estimates of the variance component, the HRs and p-values for the predictors.
 }
+\section{About \code{type}}{
+
+'bd' is used for a block-diagonal relatedness matrix, or a sparse matrix the inverse of which is also sparse. 'sparse' is used for a general sparse relatedness matrix the inverse of which is not sparse.
+}
+
 \section{About \code{spd}}{
 
 When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, use \code{spd=FALSE}.

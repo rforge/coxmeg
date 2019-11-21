@@ -1,5 +1,5 @@
 ## ---- message=FALSE, warning=FALSE,echo=FALSE----------------------------
-library(knitcitations)
+# library(knitcitations)
 # cleanbib()
 # options("citation_format" = "pandoc")
 # r<-citep("10.1101/729285")

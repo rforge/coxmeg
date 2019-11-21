@@ -14,7 +14,7 @@ fit_ppl(X, outcome, corr, type, tau = 0.5, FID = NULL, eps = 1e-06,
 
 \item{corr}{A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.}
 
-\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'.}
+\item{type}{A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.}
 
 \item{tau}{A positive scalar. A variance component given by the user. Default is 0.5.}
 
@@ -37,6 +37,8 @@ HR: The estimated HR for each predictor in X.
 
 sd_beta: The estimated standard error of beta.
 
+p: The p-value.
+
 iter: The number of iterations until convergence.
 
 ppl: The PPL when the convergence is reached.
@@ -44,6 +46,11 @@ ppl: The PPL when the convergence is reached.
 \description{
 \code{fit_ppl} returns estimates of HRs and their p-values given a known variance component (tau).
 }
+\section{About \code{type}}{
+
+'bd' is used for a block-diagonal relatedness matrix, or a sparse matrix the inverse of which is also sparse. 'sparse' is used for a general sparse relatedness matrix the inverse of which is not sparse.
+}
+
 \section{About \code{solver}}{
 
 When \code{solver=1,3}/\code{solver=2}, Cholesky decompositon/PCG is used to solve the linear system. When \code{solver=3}, the solve function in the Matrix package is used, and when \code{solver=1}, it uses RcppEigen:LDLT to solve linear systems.
