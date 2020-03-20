@@ -2,7 +2,7 @@
 # library(knitcitations)
 # cleanbib()
 # options("citation_format" = "pandoc")
-# r<-citep("10.1101/729285")
+# r<-citep("10.1534/genetics.119.302940")
 # write.bibtex(file="references.bib")
 
 ## ----eval=FALSE----------------------------------------------------------
@@ -51,6 +51,13 @@ for(i in (size[1]-1):1)
 tmat <- bdsmatrix(blocksize=size, blocks=rep(bls,n_f),dimnames=list(as.character(1:n),as.character(1:n)))
 re_coxme = coxme(Surv(outcome[,1],outcome[,2])~as.matrix(pred)+(1|as.character(1:n)), varlist=list(tmat),ties='breslow')
 re_coxme
+
+## ----echo=TRUE-----------------------------------------------------------
+re = coxmeg(outcome,sigma,type='bd',order=1,detap='diagonal')
+tau = re$tau
+print(tau)
+re2 = fit_ppl(pred,outcome,sigma,type='bd',tau=tau,order=1)
+re2
 
 ## ----echo=TRUE-----------------------------------------------------------
 library(coxmeg)

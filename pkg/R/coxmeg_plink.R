@@ -407,7 +407,7 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
   snp_ind = snpgdsSelectSNP(genofile,sample.id=samid,maf=maf,missing.rate=0,remove.monosnp=TRUE)
   
   nsnp = length(snp_ind)
-  blocks = 10000
+  blocks = max(100,ceiling(5e6/n))
   nblock = ceiling(nsnp/blocks)
   remain = nsnp%%blocks
   sp = blocks*((1:nblock)-1) + 1

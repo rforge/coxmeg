@@ -1,7 +1,8 @@
 ---
-title: "Cox Mixed-Effects Model for Genome-Wide Association Studies"
+title: "Cox Mixed-Effects Models for Genome-Wide Association Studies"
 author: "Liang He"
 date: "`r Sys.Date()`"
+bibliography: "references.bib"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Cox Mixed-Effects Model for Genome-Wide Association Studies}
@@ -13,14 +14,14 @@ vignette: >
 # library(knitcitations)
 # cleanbib()
 # options("citation_format" = "pandoc")
-# r<-citep("10.1101/729285")
+# r<-citep("10.1534/genetics.119.302940")
 # write.bibtex(file="references.bib")
 ```
 
 
 ## Overview
 
-Time-to-event is one of the most important phenotypes in genetic epidemiology. The R-package, "coxmeg", provides a set of utilities to fit a Cox mixed-effects model and to efficiently perform genome-wide association analysis of time-to-event phenotypes using a Cox mixed-effects model. 
+Time-to-event is one of the most important phenotypes in genetic epidemiology. The R-package, "coxmeg", provides a set of utilities to fit a Cox mixed-effects model and to efficiently perform genome-wide association analysis of time-to-event phenotypes using a Cox mixed-effects model. More details can be found in [@He_2020].
 
 ## Installation
 
@@ -85,7 +86,7 @@ re = coxmeg(outcome,sigma,type='bd',X=pred,order=1,detap='diagonal')
 re
 ```
 
-In the above result, ```tau``` is the estimated variance component, and ```int_ll``` is -2*log(lik) of the integrated/marginal likelihood of tau.
+In the above result, ```tau``` is the estimated variance component, and ```int_ll``` is -2*log(lik) of the integrated/marginal likelihood of tau. 
 
 We give more details about specifying ```order``` and ```detap```. We set ```order=1``` (also by default) to use the first-order approximation of the inverse Hessian matrix in the optimization. By ```detap='diagonal'```, we tell ```coxmeg``` to use a diagonal approximation to compute the determinant, which is much faster under this setting, when estimating the variance component. By default (```detap='NULL'```), ```coxmeg``` will automatically select a method for computing the determinant based on ```type```, the sample size, and whether the relatedness matrix is symmetric positive definite (SPD).
 
@@ -103,6 +104,14 @@ re_coxme = coxme(Surv(outcome[,1],outcome[,2])~as.matrix(pred)+(1|as.character(1
 re_coxme
 ```
 
+In GWAS, we may split the procedure into two separate steps, (1) estimate the variance component under the null model, and (2) estimate the coefficients for the predictors using the estimated variance component. This can be carried out in the following way.
+```{r,echo=TRUE}
+re = coxmeg(outcome,sigma,type='bd',order=1,detap='diagonal')
+tau = re$tau
+print(tau)
+re2 = fit_ppl(pred,outcome,sigma,type='bd',tau=tau,order=1)
+re2
+```
 
 ## Perform GWAS of an age-at-onset phenotype with a sparse relatedness matrix
 
