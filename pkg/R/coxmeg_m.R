@@ -171,10 +171,6 @@ coxmeg_m <- function(X,outcome,corr,type,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-0
   rs <- rs_sum(rk-1,d_v[ind[,1]])
   if(spd==FALSE)
   {
-    if(max(colSums(corr))<1e-10)
-    {
-      stop("The relatedness matrix has a zero eigenvalue with an eigenvector of 1s.")
-    }
     rk_cor = matrix.rank(as.matrix(corr),method='chol')
     spsd = FALSE
     if(rk_cor<n)
@@ -203,7 +199,12 @@ coxmeg_m <- function(X,outcome,corr,type,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-0
       corr = chol(corr)
       corr = as.matrix(chol2inv(corr))
     }else{
-      corr <- ginv(corr)
+      ei = eigen(corr)
+      ei$values[ei$values<1e-10] = 1e-6
+      corr = ei$vectors%*%diag(1/ei$values)%*%t(ei$vectors)
+      # corr <- ginv(corr)
+      rk_cor = n
+      spsd = FALSE
     }
     inv <- TRUE
     sigma_i_s = corr
@@ -260,7 +261,10 @@ coxmeg_m <- function(X,outcome,corr,type,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-0
       {
         stop("The relatedness matrix has negative eigenvalues.")
       }
-      sigma_i_s = sigma_i_s$vectors%*%(c(1/sigma_i_s$values[1:rk_cor],rep(0,n-rk_cor))*t(sigma_i_s$vectors))
+      sigma_i_s$values[sigma_i_s$values<1e-10] = 1e-6
+      sigma_i_s = sigma_i_s$vectors%*%diag(1/sigma_i_s$values)%*%t(sigma_i_s$vectors)
+      rk_cor = n
+      spsd = FALSE
       inv = TRUE
       si_d <- as.vector(Matrix::diag(sigma_i_s))
       if(is.null(detap))

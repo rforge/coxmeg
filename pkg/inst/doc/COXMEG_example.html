@@ -12,7 +12,7 @@
 
 <meta name="author" content="Liang He" />
 
-<meta name="date" content="2020-03-17" />
+<meta name="date" content="2020-05-05" />
 
 <title>Cox Mixed-Effects Models for Genome-Wide Association Studies</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Cox Mixed-Effects Models for Genome-Wide Association Studies</h1>
 <h4 class="author"><em>Liang He</em></h4>
-<h4 class="date"><em>2020-03-17</em></h4>
+<h4 class="date"><em>2020-05-05</em></h4>
 
 
 
@@ -98,8 +98,10 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="fit-a-cox-mixed-effects-model-with-a-sparse-relatedness-matrix" class="section level2">
 <h2>Fit a Cox mixed-effects model with a sparse relatedness matrix</h2>
 <p>We illustrate how to use coxmeg to fit a Cox mixed-effects model with a sparse relatedness matrix. We first simulate a block-diagonal relatedness matrix for a cohort consisting of 200 families, each of which has five members.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxmeg)
-<span class="kw">library</span>(MASS)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxmeg)</code></pre></div>
+<pre><code>## Loading required package: Rcpp</code></pre>
+<pre><code>## Warning: package 'Rcpp' was built under R version 3.5.3</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(MASS)
 <span class="kw">library</span>(Matrix)
 n_f &lt;-<span class="st"> </span><span class="dv">200</span>
 mat_list &lt;-<span class="st"> </span><span class="kw">list</span>()
@@ -123,13 +125,13 @@ cen &lt;-<span class="st"> </span><span class="kw">rexp</span>(n, <span class="d
 ycen &lt;-<span class="st"> </span><span class="kw">pmin</span>(y, cen)
 outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span class="kw">as.numeric</span>(y <span class="op">&lt;=</span><span class="st"> </span>cen))
 <span class="kw">head</span>(outcome)</code></pre></div>
-<pre><code>##          ycen  
-## [1,] 1.064567 1
-## [2,] 2.776142 1
-## [3,] 5.328043 0
-## [4,] 7.016137 1
-## [5,] 1.304676 1
-## [6,] 1.987804 1</code></pre>
+<pre><code>##            ycen  
+## [1,] 1.64708574 1
+## [2,] 0.08925755 1
+## [3,] 0.84107141 1
+## [4,] 5.67026123 1
+## [5,] 7.03373594 1
+## [6,] 0.06015173 1</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sigma[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>,<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>]</code></pre></div>
 <pre><code>## 5 x 5 sparse Matrix of class &quot;dgCMatrix&quot;
 ##                         
@@ -148,22 +150,22 @@ outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span c
 <pre><code>## Solver: Cholesky decomposition (RcppEigen=TRUE).</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
 <pre><code>## $beta
-## [1] 0.05415928
+## [1] 0.062935
 ## 
 ## $HR
-## [1] 1.055653
+## [1] 1.064958
 ## 
 ## $sd_beta
-## [1] 0.03868632
+## [1] 0.03797282
 ## 
 ## $p
-## [1] 0.1615255
+## [1] 0.09744475
 ## 
 ## $tau
-## [1] 0.2601322
+## [1] 0.2357555
 ## 
 ## $iter
-## [1] 16
+## [1] 14
 ## 
 ## $rank
 ## [1] 1000
@@ -172,13 +174,14 @@ outcome &lt;-<span class="st"> </span><span class="kw">cbind</span>(ycen,<span c
 ## [1] 1000
 ## 
 ## $int_ll
-## [1] 11586.92</code></pre>
+## [1] 11544.98</code></pre>
 <p>In the above result, <code>tau</code> is the estimated variance component, and <code>int_ll</code> is -2*log(lik) of the integrated/marginal likelihood of tau.</p>
 <p>We give more details about specifying <code>order</code> and <code>detap</code>. We set <code>order=1</code> (also by default) to use the first-order approximation of the inverse Hessian matrix in the optimization. By <code>detap='diagonal'</code>, we tell <code>coxmeg</code> to use a diagonal approximation to compute the determinant, which is much faster under this setting, when estimating the variance component. By default (<code>detap='NULL'</code>), <code>coxmeg</code> will automatically select a method for computing the determinant based on <code>type</code>, the sample size, and whether the relatedness matrix is symmetric positive definite (SPD).</p>
 <p>It should be noted that when the relatedness matrix is SPD, <code>coxmeg</code> will make use of the sparsity by setting <code>type='sparse'</code> or <code>type='bd'</code> regardless of whether the relatedness matrix or its inverse is sparse. However, when the relatedness matrix is symmetric positive semidefinite (SPSD), <code>coxmeg</code> can make use of the sparsity only when its inverse is sparse. When the relatedness matrix is SPSD and its inverse is dense, setting <code>type='sparse'</code> may result in worse performance. In such a case, it would be better to use <code>type='dense'</code> or to convert the relatedness matrix to SPD or block-diagonal if possible.</p>
 <p>We compare the results with coxme, which are slightly different due to different approximation of the log-determinant used in the estimation of the variance component. Also, the integrated log-likelihoods cannot be compared directly because different approximation of log-determinant is used.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxme)
-bls &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(coxme)</code></pre></div>
+<pre><code>## Loading required package: survival</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">bls &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>)
 <span class="cf">for</span>(i <span class="cf">in</span> (size[<span class="dv">1</span>]<span class="op">-</span><span class="dv">1</span>)<span class="op">:</span><span class="dv">1</span>)
 {bls &lt;-<span class="st"> </span><span class="kw">c</span>(bls, <span class="kw">c</span>(<span class="kw">rep</span>(offd,i),<span class="dv">1</span>))}
 tmat &lt;-<span class="st"> </span><span class="kw">bdsmatrix</span>(<span class="dt">blocksize=</span>size, <span class="dt">blocks=</span><span class="kw">rep</span>(bls,n_f),<span class="dt">dimnames=</span><span class="kw">list</span>(<span class="kw">as.character</span>(<span class="dv">1</span><span class="op">:</span>n),<span class="kw">as.character</span>(<span class="dv">1</span><span class="op">:</span>n)))
@@ -186,23 +189,23 @@ re_coxme =<span class="st"> </span><span class="kw">coxme</span>(<span class="kw
 re_coxme</code></pre></div>
 <pre><code>## Cox mixed-effects model fit by maximum likelihood
 ## 
-##   events, n = 951, 1000
+##   events, n = 948, 1000
 ##   Iterations= 7 34 
 ##                     NULL Integrated    Fitted
-## Log-likelihood -5635.258  -5625.947 -5448.103
+## Log-likelihood -5611.999  -5604.985 -5440.608
 ## 
-##                    Chisq     df          p   AIC     BIC
-## Integrated loglik  18.62   2.00 9.0425e-05 14.62    4.91
-##  Penalized loglik 374.31 160.14 0.0000e+00 54.02 -723.88
+##                    Chisq    df          p   AIC     BIC
+## Integrated loglik  14.03   2.0 0.00089954 10.03    0.32
+##  Penalized loglik 342.78 149.1 0.00000000 44.59 -679.17
 ## 
 ## Model:  Surv(outcome[, 1], outcome[, 2]) ~ as.matrix(pred) + (1 | as.character(1:n)) 
 ## Fixed coefficients
-##                      coef exp(coef)  se(coef)   z    p
-## as.matrix(pred) 0.0542376  1.055735 0.0387213 1.4 0.16
+##                       coef exp(coef)   se(coef)    z     p
+## as.matrix(pred) 0.06307751  1.065109 0.03801478 1.66 0.097
 ## 
 ## Random effects
 ##  Group             Variable Std Dev   Variance 
-##  as.character.1.n. Vmat.1   0.5119298 0.2620721</code></pre>
+##  as.character.1.n. Vmat.1   0.4876427 0.2377955</code></pre>
 <p>In GWAS, we may split the procedure into two separate steps, (1) estimate the variance component under the null model, and (2) estimate the coefficients for the predictors using the estimated variance component. This can be carried out in the following way.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re =<span class="st"> </span><span class="kw">coxmeg</span>(outcome,sigma,<span class="dt">type=</span><span class="st">'bd'</span>,<span class="dt">order=</span><span class="dv">1</span>,<span class="dt">detap=</span><span class="st">'diagonal'</span>)</code></pre></div>
 <pre><code>## Remove 0 subjects censored before the first failure.</code></pre>
@@ -213,7 +216,7 @@ re_coxme</code></pre></div>
 <pre><code>## Solver: Cholesky decomposition (RcppEigen=TRUE).</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">tau =<span class="st"> </span>re<span class="op">$</span>tau
 <span class="kw">print</span>(tau)</code></pre></div>
-<pre><code>## [1] 0.2544188</code></pre>
+<pre><code>## [1] 0.21996</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re2 =<span class="st"> </span><span class="kw">fit_ppl</span>(pred,outcome,sigma,<span class="dt">type=</span><span class="st">'bd'</span>,<span class="dt">tau=</span>tau,<span class="dt">order=</span><span class="dv">1</span>)</code></pre></div>
 <pre><code>## Remove 0 subjects censored before the first failure.</code></pre>
 <pre><code>## The sample size included is 1000.</code></pre>
@@ -222,23 +225,23 @@ re_coxme</code></pre></div>
 <pre><code>## Solver: Cholesky decomposition (RcppEigen=TRUE).</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re2</code></pre></div>
 <pre><code>## $beta
-## [1] 0.05395182
+## [1] 0.06188035
 ## 
 ## $HR
-## [1] 1.055434
+## [1] 1.063835
 ## 
 ## $sd_beta
-## [1] 0.03861089
+## [1] 0.03773634
 ## 
 ## $p
-## [1] 0.162317
+## [1] 0.1010451
 ## 
 ## $iter
 ## [1] 4
 ## 
 ## $ppl
 ##           [,1]
-## [1,] -5531.019</code></pre>
+## [1,] -5521.238</code></pre>
 </div>
 <div id="perform-gwas-of-an-age-at-onset-phenotype-with-a-sparse-relatedness-matrix" class="section level2">
 <h2>Perform GWAS of an age-at-onset phenotype with a sparse relatedness matrix</h2>
@@ -327,17 +330,17 @@ pheno_m =<span class="st"> </span><span class="kw">read.table</span>(pheno)
 re =<span class="st"> </span><span class="kw">coxmeg_m</span>(geno,pheno_m[,<span class="dv">3</span><span class="op">:</span><span class="dv">4</span>],sigma,<span class="dt">type=</span><span class="st">'bd'</span>,<span class="dt">verbose=</span><span class="ot">FALSE</span>)
 re</code></pre></div>
 <pre><code>## $summary
-##            beta        HR    sd_beta         p
-## 1  -0.021409406 0.9788181 0.02885941 0.4581771
-## 2  -0.006310808 0.9937091 0.03012998 0.8340948
-## 3   0.020304388 1.0205119 0.02968836 0.4940272
-## 4  -0.007481601 0.9925463 0.02942118 0.7992692
-## 5   0.022599923 1.0228572 0.02951035 0.4437772
-## 6  -0.004429061 0.9955807 0.02965650 0.8812811
-## 7   0.033000899 1.0335515 0.02978259 0.2678358
-## 8   0.019409226 1.0195988 0.02963494 0.5125038
-## 9  -0.022186591 0.9780577 0.02982659 0.4569655
-## 10 -0.026401403 0.9739441 0.02883433 0.3598642
+##           beta        HR    sd_beta          p
+## 1  -0.01274031 0.9873405 0.02958269 0.66670990
+## 2   0.02885699 1.0292774 0.02964564 0.33035580
+## 3   0.01725741 1.0174072 0.03018020 0.56744908
+## 4   0.01147152 1.0115376 0.02937106 0.69611337
+## 5  -0.04966065 0.9515523 0.02913437 0.08828053
+## 6   0.03112950 1.0316191 0.02988690 0.29760803
+## 7  -0.03672504 0.9639411 0.02923364 0.20902181
+## 8  -0.01103218 0.9890284 0.02928799 0.70641189
+## 9   0.02924661 1.0296785 0.02995618 0.32890928
+## 10 -0.03684995 0.9638207 0.02942006 0.21037140
 ## 
 ## $tau
 ## [1] 0.04052206
@@ -379,29 +382,29 @@ re</code></pre></div>
 ## 19 null_18          1       19    D/d 0.09433333 0.09433333 null_18
 ## 20 null_19          1       20    d/D 0.11650000 0.11650000 null_19
 ##            beta        HR    sd_beta           p
-## 1   0.015739315 1.0158638 0.02940767 0.592503861
-## 2   0.019470785 1.0196616 0.03224594 0.545962461
-## 3  -0.049980090 0.9512484 0.03863176 0.195749583
-## 4   0.044163057 1.0451528 0.03703967 0.233136687
-## 5   0.028504856 1.0289150 0.03435209 0.406660262
-## 6  -0.114416254 0.8918866 0.04237522 0.006932387
-## 7  -0.017905192 0.9822542 0.04658945 0.700742341
-## 8  -0.004216483 0.9957924 0.02719954 0.876805225
-## 9  -0.063754575 0.9382352 0.02960734 0.031292241
-## 10 -0.008412001 0.9916233 0.02732664 0.758210522
-## 11 -0.013591206 0.9865007 0.02862223 0.634895314
-## 12  0.037599442 1.0383152 0.03115641 0.227510627
-## 13 -0.017227674 0.9829199 0.03631517 0.635219451
-## 14 -0.068231786 0.9340439 0.05703136 0.231544112
-## 15 -0.013911119 0.9861852 0.03434316 0.685431720
-## 16  0.002140450 1.0021427 0.03688480 0.953724203
-## 17  0.004750280 1.0047616 0.02862218 0.868184507
-## 18  0.001859550 1.0018613 0.03100773 0.952179106
-## 19 -0.016049518 0.9840786 0.04735539 0.734672746
-## 20 -0.022451316 0.9777988 0.04234908 0.596008717
+## 1   0.015801637 1.0159271 0.02942854 0.591302552
+## 2   0.019500043 1.0196914 0.03226956 0.545653487
+## 3  -0.050104602 0.9511299 0.03865789 0.194940012
+## 4   0.044192859 1.0451839 0.03706710 0.233167320
+## 5   0.028534298 1.0289453 0.03437728 0.406519836
+## 6  -0.114506240 0.8918064 0.04240704 0.006930392
+## 7  -0.017835313 0.9823228 0.04662088 0.702045562
+## 8  -0.004224499 0.9957844 0.02721952 0.876662817
+## 9  -0.063766426 0.9382241 0.02962866 0.031382586
+## 10 -0.008414597 0.9916207 0.02734503 0.758295790
+## 11 -0.013600437 0.9864916 0.02864308 0.634912066
+## 12  0.037683696 1.0384027 0.03117861 0.226801480
+## 13 -0.017238967 0.9829088 0.03634195 0.635247128
+## 14 -0.068253894 0.9340233 0.05707121 0.231718941
+## 15 -0.013860736 0.9862349 0.03436842 0.686728533
+## 16  0.002110429 1.0021127 0.03691084 0.954404675
+## 17  0.004739375 1.0047506 0.02864321 0.868580027
+## 18  0.001926627 1.0019285 0.03102870 0.950489741
+## 19 -0.016047312 0.9840808 0.04738859 0.734886700
+## 20 -0.022500831 0.9777504 0.04237899 0.595458256
 ## 
 ## $tau
-## [1] 0.04133128
+## [1] 0.042313
 ## 
 ## $rank
 ## [1] 3000
@@ -437,29 +440,29 @@ re</code></pre></div>
 ## 19 null_18          1       19    D/d 0.09433333 0.09433333 null_18
 ## 20 null_19          1       20    d/D 0.11650000 0.11650000 null_19
 ##     score_test           p
-## 1  0.286457468 0.592499663
-## 2  0.364612947 0.545955417
-## 3  1.674182639 0.195699240
-## 4  1.421834699 0.233101657
-## 5  0.688588584 0.406644871
-## 6  7.299640863 0.006896839
-## 7  0.147707774 0.700735587
-## 8  0.024031284 0.876805338
-## 9  4.638435983 0.031263482
-## 10 0.094761638 0.758208814
-## 11 0.225483668 0.634893032
-## 12 1.456530807 0.227482913
-## 13 0.225055428 0.635214642
-## 14 1.431949366 0.231446564
-## 15 0.164077648 0.685429739
-## 16 0.003367565 0.953724157
-## 17 0.027544488 0.868184241
-## 18 0.003596539 0.952178610
-## 19 0.114868583 0.734667979
-## 20 0.281070151 0.596000659
+## 1  0.288321305 0.591298291
+## 2  0.365174596 0.545646348
+## 3  1.680262780 0.194889539
+## 4  1.421648201 0.233132308
+## 5  0.689000905 0.406504418
+## 6  7.300159917 0.006894847
+## 7  0.146359825 0.702038598
+## 8  0.024087315 0.876662950
+## 9  4.633487799 0.031353764
+## 10 0.094692750 0.758293976
+## 11 0.225461298 0.634909823
+## 12 1.460983313 0.226773730
+## 13 0.225018697 0.635242244
+## 14 1.430876472 0.231621451
+## 15 0.162651908 0.686726614
+## 16 0.003269148 0.954404626
+## 17 0.027377930 0.868579748
+## 18 0.003855475 0.950489192
+## 19 0.114676315 0.734881763
+## 20 0.281912947 0.595450136
 ## 
 ## $tau
-## [1] 0.04133128
+## [1] 0.042313
 ## 
 ## $rank
 ## [1] 3000
@@ -477,17 +480,17 @@ re =<span class="st"> </span><span class="kw">coxmeg_plink</span>(pheno,sigma,<s
 ## deficient or indefinite</code></pre>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">re</code></pre></div>
 <pre><code>## $tau
-## [1] 0.04038302
+## [1] 0.04024135
 ## 
 ## $iter
 ## [1] 15
 ## 
 ## $rank
-## [1] 2999
+## [1] 3000
 ## 
 ## $nsam
 ## [1] 3000</code></pre>
-<p>The warning indicates that the relatedness matrix is not full rank. Because there is a twin pair in the sample, the rank of the relatedness matrix is less than the sample size. If the user is not sure whether the relatedness matrix is positive definite or positive semidefinite, it is better to use <code>spd=FALSE</code>.</p>
+<p>The warning indicates that the relatedness matrix is not full rank. Because there is a twin pair in the sample, the rank of the relatedness matrix is less than the sample size. If the user is not sure whether the relatedness matrix is positive definite or positive semidefinite, it is better to use <code>spd=FALSE</code> although it is slower because coxmeg will perform a eigenvalue decomposition under this setting. In the current version, instead of using the previously proposed GPPL in <span class="citation">(He and Kulminski 2020)</span>, coxmeg uses a modified PPL by turning all zero eigenvalues of the relatedness matrix to a small value (1e-6). This modification makes coxmeg suitable for twin cohorts.</p>
 <div id="refs" class="references">
 <div id="ref-He_2020">
 <p>He, Liang, and Alexander M. Kulminski. 2020. “Fast Algorithms for Conducting Large-Scale GWAS of Age-at-Onset Traits Using Cox Mixed-Effects Models.” <em>Genetics</em>, March. Genetics Society of America, genetics.302940.2019. doi:<a href="https://doi.org/10.1534/genetics.119.302940">10.1534/genetics.119.302940</a>.</p>
