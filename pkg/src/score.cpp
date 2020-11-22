@@ -7,6 +7,10 @@
 // RcppEigen so that the build process will know what to do
 //
 // [[Rcpp::depends(RcppEigen)]]
+typedef Eigen::SparseMatrix<double> SpMat;
+typedef Eigen::Map<Eigen::VectorXd> MapVecd;
+typedef Eigen::Map<Eigen::MatrixXd> MapMatd;
+typedef Eigen::MappedSparseMatrix<double> MSpMat;
 
 // simple example of creating two matrices and
 // returning the result of an operatioon on them
@@ -15,8 +19,8 @@
 // available from R
 
 // [[Rcpp::export]]
-Eigen::MatrixXd csqei(const Eigen::VectorXd & w_v, const Eigen::MatrixXd & mx, const Eigen::VectorXd & rs_rs, 
-                      const Eigen::VectorXd & rs_cs,const Eigen::MatrixXi & ind, const Eigen::VectorXd & av) {
+Eigen::MatrixXd csqei(const Eigen::Map<Eigen::VectorXd> w_v, const Eigen::MatrixXd & mx, const Eigen::Map<Eigen::VectorXd> rs_rs, 
+                      const Eigen::Map<Eigen::VectorXd> rs_cs,const Eigen::MatrixXi & ind, const Eigen::Map<Eigen::VectorXd> av) {
   
   int nr = mx.rows();
   int nc = mx.cols();
@@ -46,8 +50,8 @@ Eigen::MatrixXd csqei(const Eigen::VectorXd & w_v, const Eigen::MatrixXd & mx, c
 
 
 // [[Rcpp::export]]
-Eigen::MatrixXd wma_cp(const Eigen::VectorXd & w, const Eigen::VectorXd & cs_p, const Eigen::MatrixXi & ind,
-                       const Eigen::VectorXd & a) {
+Eigen::MatrixXd wma_cp(const Eigen::Map<Eigen::VectorXd> w, const Eigen::Map<Eigen::VectorXd> cs_p, const Eigen::MatrixXi & ind,
+                       const Eigen::Map<Eigen::VectorXd> a) {
   
   int n = w.size();
   
@@ -83,10 +87,11 @@ Eigen::MatrixXd wma_cp(const Eigen::VectorXd & w, const Eigen::VectorXd & cs_p, 
 
 //
 // [[Rcpp::export]]
-Eigen::VectorXd score_test(const Eigen::VectorXd & deriv, const Eigen::VectorXd & bw_v,
-               const Eigen::VectorXd & w, const Eigen::VectorXd & rs_rs,const Eigen::VectorXd & rs_cs,const Eigen::VectorXd & cs_p, const Eigen::MatrixXi & ind,
-               const Eigen::VectorXd & a, const Eigen::VectorXd & a2, const Eigen::VectorXd & tau, 
-               const Eigen::MatrixXd & v,const Eigen::MatrixXd & cov, const Eigen::MatrixXd & x) {
+Eigen::VectorXd score_test(const Eigen::Map<Eigen::VectorXd> deriv, const Eigen::Map<Eigen::VectorXd> bw_v,
+               const Eigen::Map<Eigen::VectorXd> w, const Eigen::Map<Eigen::VectorXd> rs_rs,const Eigen::Map<Eigen::VectorXd> rs_cs,
+               const Eigen::Map<Eigen::VectorXd> cs_p, const Eigen::MatrixXi & ind,
+               const Eigen::Map<Eigen::VectorXd> a, const Eigen::Map<Eigen::VectorXd> a2, const Eigen::VectorXd & tau, 
+               const Eigen::Map<Eigen::MatrixXd> v,const Eigen::MatrixXd & cov, const Eigen::MatrixXd & x) {
 
     int n = bw_v.size();
     int n_c = cov.cols();
@@ -143,7 +148,7 @@ double logdet_ch(const Eigen::MatrixXd & X_m, const Eigen::MatrixXd & rad_m, con
 }
 
 // [[Rcpp::export]]
-double logdet_lanczos(const Eigen::MatrixXd & X_m, const Eigen::MatrixXd & rad_m, const Eigen::VectorXi & m_d) {
+double logdet_lanczos(const Eigen::Map<Eigen::MatrixXd> X_m, const Eigen::Map<Eigen::MatrixXd> rad_m, const Eigen::VectorXi & m_d) {
   
   int t = rad_m.cols();
   int n = rad_m.rows();
@@ -212,7 +217,7 @@ double logdet_lanczos(const Eigen::MatrixXd & X_m, const Eigen::MatrixXd & rad_m
 }
 
 // [[Rcpp::export]]
-double logdet_lanczos_sp(const Eigen::SparseMatrix<double> & X_m, const Eigen::MatrixXd & rad_m, const Eigen::VectorXi & m_d) {
+double logdet_lanczos_sp(const Eigen::MappedSparseMatrix<double> X_m, const Eigen::Map<Eigen::MatrixXd> rad_m, const Eigen::VectorXi & m_d) {
   
   int t = rad_m.cols();
   int n = rad_m.rows();

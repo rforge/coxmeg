@@ -15,7 +15,7 @@
 // available from R
 //
 // [[Rcpp::export]]
-Eigen::VectorXd cswei(const Eigen::VectorXd & w_v, const Eigen::VectorXd & rs_rs, 
+Eigen::VectorXd cswei(const Eigen::Map<Eigen::VectorXd> w_v, const Eigen::Map<Eigen::VectorXd> rs_rs, 
                       const Eigen::MatrixXi & ind, const Eigen::VectorXd & rev) {
   
   int n = w_v.size();

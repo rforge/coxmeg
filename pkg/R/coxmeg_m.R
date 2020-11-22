@@ -185,7 +185,7 @@ coxmeg_m <- function(X,outcome,corr,type,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-0
   }
   
   nz <- nnzero(corr)
-  if(nz>(n*n/2))
+  if( nz > ((as.double(n)^2)/2) )
   {type <- 'dense'}
   
   eigen = TRUE

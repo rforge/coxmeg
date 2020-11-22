@@ -9,6 +9,8 @@
 // [[Rcpp::depends(RcppEigen)]]
 
 typedef Eigen::SparseMatrix<double> SpMat;
+typedef Eigen::MappedSparseMatrix<double> MSpMat;
+typedef Eigen::Map<Eigen::MatrixXd> MapMatd;
 
 // simple example of creating two matrices and
 // returning the result of an operatioon on them
@@ -17,7 +19,7 @@ typedef Eigen::SparseMatrix<double> SpMat;
 // available from R
 //
 // [[Rcpp::export]]
-Eigen::MatrixXd pcg_dense(const Eigen::MatrixXd & A, const Eigen::MatrixXd & B, const double tol) {
+Eigen::MatrixXd pcg_dense(const Eigen::Map<Eigen::MatrixXd> A, const Eigen::Map<Eigen::MatrixXd> B, const double tol) {
 
   
   Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper> cg;
@@ -29,7 +31,7 @@ Eigen::MatrixXd pcg_dense(const Eigen::MatrixXd & A, const Eigen::MatrixXd & B, 
 }
 
 // [[Rcpp::export]]
-Eigen::MatrixXd pcg_sparse(Eigen::SparseMatrix<double> & A, const Eigen::MatrixXd & B, const double tol) {
+Eigen::MatrixXd pcg_sparse(const Eigen::MappedSparseMatrix<double> A, const Eigen::Map<Eigen::MatrixXd> B, const double tol) {
   
   Eigen::ConjugateGradient<SpMat, Eigen::Lower|Eigen::Upper > solver_cg;
   solver_cg.setTolerance(tol);

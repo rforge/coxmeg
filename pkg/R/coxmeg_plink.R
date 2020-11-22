@@ -217,7 +217,7 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
   }
   
   nz <- nnzero(corr)
-  if(nz>(n*n/2))
+  if( nz > ((as.double(n)^2)/2) )
   {type <- 'dense'}
   
   eigen = TRUE

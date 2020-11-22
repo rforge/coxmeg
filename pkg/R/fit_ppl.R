@@ -136,7 +136,7 @@ fit_ppl <- function(X,outcome,corr,type,tau=0.5,FID=NULL,eps=1e-06,order=1,solve
   }
   
   nz <- nnzero(corr)
-  if(nz>(n*n/2))
+  if( nz > ((as.double(n)^2)/2) )
   {type <- 'dense'}
   inv = NULL
   

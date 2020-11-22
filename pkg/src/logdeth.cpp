@@ -11,6 +11,9 @@
 typedef Eigen::SparseMatrix<double> SpMat;
 typedef Eigen::SimplicialLDLT<SpMat> SpChol;
 typedef Eigen::LDLT<Eigen::MatrixXd> Chol;
+typedef Eigen::Map<Eigen::VectorXd> MapVecd;
+typedef Eigen::Map<Eigen::MatrixXd> MapMatd;
+typedef Eigen::MappedSparseMatrix<double> MSpMat;
 
 // simple example of creating two matrices and
 // returning the result of an operatioon on them
@@ -19,9 +22,9 @@ typedef Eigen::LDLT<Eigen::MatrixXd> Chol;
 // available from R
 //
 // [[Rcpp::export]]
-double logdeth(Eigen::SparseMatrix<double> & A, const Eigen::VectorXd & dv, const Eigen::VectorXd & bw_v,
-                  const Eigen::VectorXd & w, const Eigen::VectorXd & cs_p, const Eigen::MatrixXi & v4,
-                  const Eigen::VectorXd & a, const Eigen::VectorXd & tau, const Eigen::VectorXi & inv, const Eigen::VectorXi & detap) {
+double logdeth(Eigen::SparseMatrix<double> & A, const Eigen::Map<Eigen::VectorXd> dv, const Eigen::Map<Eigen::VectorXd> bw_v,
+                  const Eigen::Map<Eigen::VectorXd> w, const Eigen::Map<Eigen::VectorXd> cs_p, const Eigen::MatrixXi & v4,
+                  const Eigen::Map<Eigen::VectorXd> a, const Eigen::VectorXd & tau, const Eigen::VectorXi & inv, const Eigen::VectorXi & detap) {
   
   int n = w.size();
   
