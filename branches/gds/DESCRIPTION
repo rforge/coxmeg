@@ -12,5 +12,5 @@ LinkingTo: Rcpp, RcppEigen
 Depends: R (>= 3.4), Rcpp (>= 0.12.18)
 RoxygenNote: 7.1.0
 Suggests: knitr,
-    rmarkdown
+    rmarkdown, testthat
 VignetteBuilder: knitr
