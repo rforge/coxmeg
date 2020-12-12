@@ -363,9 +363,9 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
   if(verbose==TRUE)
   {message(paste0('The variance component is estimated. Start analyzing SNPs...'))}
   
-  genofile <- gds
   # snp_info <- SNPRelate::snpgdsSNPRateFreq(genofile,with.id=TRUE)
-  snp_ind = SNPRelate::snpgdsSelectSNP(genofile,sample.id=samid,maf=maf,missing.rate=0,remove.monosnp=TRUE)
+  #snp_ind = SNPRelate::snpgdsSelectSNP(genofile,sample.id=samid,maf=maf,missing.rate=0,remove.monosnp=TRUE)
+  snp_ind <- .gdsSelectSNP(gds, sample.id=samid, maf=maf, missing.rate=0, remove.monosnp=TRUE)
   
   nsnp = length(snp_ind)
   blocks = max(100,ceiling(5e6/n))
@@ -389,7 +389,8 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
     for(bi in 1:nblock)
     {  
       snp_t = sp[bi]:ep[bi]
-      X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
+      #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[snp_t], with.id=TRUE, verbose=FALSE)
       X = X$genotype
       
       p <- ncol(X)
@@ -468,7 +469,8 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
       if(verbose==TRUE)
       {message(paste0('Finish analyzing SNPs. Start analyzing top SNPs using a variant-specific variance component...'))}
       
-      X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[top],with.id=TRUE,verbose=FALSE)
+      #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[top],with.id=TRUE,verbose=FALSE)
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[top], with.id=TRUE, verbose=FALSE)
       X = X$genotype
       p <- ncol(X)
       c_ind <- c()
@@ -562,7 +564,8 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
     for(bi in 1:nblock)
     {  
       snp_t = sp[bi]:ep[bi]
-      X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
+      #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[snp_t], with.id=TRUE, verbose=FALSE)
       X = X$genotype
       
       t_st <- score_test(deriv,bw_v,w_v,rs$rs_rs-1,rs$rs_cs-1,rs$rs_cs_p-1,ind-1,a_v_p,a_v_2,tau_e,v,cov,X)
@@ -572,8 +575,10 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
     }
   }
   
-  snplist = SNPRelate::snpgdsSNPList(genofile)
-  af_inc = SNPRelate::snpgdsSNPList(genofile, sample.id=samid)
+  #snplist = SNPRelate::snpgdsSNPList(genofile)
+  snplist = .gdsSNPList(gds)
+  #af_inc = SNPRelate::snpgdsSNPList(genofile, sample.id=samid)
+  af_inc = .gdsSNPList(gds, sample.id=samid)
   snplist = cbind(snplist,af_inc[,'afreq'])
   colnames(snplist)[ncol(snplist)] = 'afreq_inc'
   snplist = snplist[match(snp_ind,snplist[,1]),]
