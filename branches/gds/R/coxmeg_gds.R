@@ -15,7 +15,7 @@
 #' When \code{detap='exact'}, the exact log-determinant is computed for estimating the variance component. Specifying \code{detap='diagonal'} uses diagonal approximation, and is only effective for a sparse relatedness matrix. Specifying \code{detap='slq'} uses stochastic lanczos quadrature approximation.
 #' 
 #' 
-#' @param gds A GDS object created by \code{SNPRelate::snpgdsOpen}
+#' @param gds A GDS object created by \code{\link{snpgdsOpen}} or \code{\link{seqOpen}}.
 #' @param pheno A data.frame containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
 #' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.
@@ -60,24 +60,44 @@
 #' }
 #' sigma <- as.matrix(bdiag(mat_list))
 #' 
-#' ## Estimate variance component under a null model
+#' ## Example data files
 #' pheno.file = system.file("extdata", "ex_pheno.txt", package = "coxmeg")
 #' cov.file = system.file("extdata", "ex_cov.txt", package = "coxmeg")
 #' bed = system.file("extdata", "example_null.bed", package = "coxmeg")
 #' bed = substr(bed,1,nchar(bed)-4)
 #' 
+#' ## Read phenotype and covariates
+#' pheno <- read.table(pheno.file, header=FALSE, as.is=TRUE, na.strings="-9")
+#' cov <- read.table(cov.file, header=FALSE, as.is=TRUE)
+#' 
+#' ## SNPRelate GDS object
 #' gdsfile <- tempfile()
 #' SNPRelate::snpgdsBED2GDS(bed.fn=paste0(bed,".bed"), 
 #'                          fam.fn=paste0(bed,".fam"), 
 #'                          bim.fn=paste0(bed,".bim"), 
 #'                          out.gdsfn=gdsfile, verbose=FALSE)
 #' gds <- SNPRelate::snpgdsOpen(gdsfile)
-#' pheno <- read.table(pheno.file, header=FALSE, as.is=TRUE, na.strings="-9")
-#' cov <- read.table(cov.file, header=FALSE, as.is=TRUE)
+#' 
+#' ## Estimate variance component under a null model
 #' re <- coxmeg_gds(gds,pheno,sigma,type='bd',cov=cov,detap='diagonal',order=1)
 #' re
 #' 
 #' SNPRelate::snpgdsClose(gds)
+#' unlink(gdsfile)
+#' 
+#' ## SeqArray GDS object
+#' gdsfile <- tempfile()
+#' SeqArray::seqBED2GDS(bed.fn=paste0(bed,".bed"), 
+#'                      fam.fn=paste0(bed,".fam"), 
+#'                      bim.fn=paste0(bed,".bim"), 
+#'                      out.gdsfn=gdsfile, verbose=FALSE)
+#' gds <- SeqArray::seqOpen(gdsfile)
+#' 
+#' ## Estimate variance component under a null model
+#' re <- coxmeg_gds(gds,pheno,sigma,type='bd',cov=cov,detap='diagonal',order=1)
+#' re
+#' 
+#' SeqArray::seqClose(gds)
 #' unlink(gdsfile)
 
 
@@ -365,7 +385,7 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
   
   # snp_info <- SNPRelate::snpgdsSNPRateFreq(genofile,with.id=TRUE)
   #snp_ind = SNPRelate::snpgdsSelectSNP(genofile,sample.id=samid,maf=maf,missing.rate=0,remove.monosnp=TRUE)
-  snp_ind <- .gdsSelectSNP(gds, sample.id=samid, maf=maf, missing.rate=0, remove.monosnp=TRUE)
+  snp_ind <- .gdsSelectSNP(gds, sample.id=samid, maf=maf, missing.rate=0, verbose=verbose)
   
   nsnp = length(snp_ind)
   blocks = max(100,ceiling(5e6/n))
@@ -390,8 +410,8 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
     {  
       snp_t = sp[bi]:ep[bi]
       #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
-      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[snp_t], with.id=TRUE, verbose=FALSE)
-      X = X$genotype
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[snp_t], verbose=FALSE)
+      #X = X$genotype
       
       p <- ncol(X)
       c_ind <- c()
@@ -470,8 +490,8 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
       {message(paste0('Finish analyzing SNPs. Start analyzing top SNPs using a variant-specific variance component...'))}
       
       #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[top],with.id=TRUE,verbose=FALSE)
-      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[top], with.id=TRUE, verbose=FALSE)
-      X = X$genotype
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[top], verbose=FALSE)
+      #X = X$genotype
       p <- ncol(X)
       c_ind <- c()
       if(k>0)
@@ -565,8 +585,8 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
     {  
       snp_t = sp[bi]:ep[bi]
       #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
-      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[snp_t], with.id=TRUE, verbose=FALSE)
-      X = X$genotype
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[snp_t], verbose=FALSE)
+      #X = X$genotype
       
       t_st <- score_test(deriv,bw_v,w_v,rs$rs_rs-1,rs$rs_cs-1,rs$rs_cs_p-1,ind-1,a_v_p,a_v_2,tau_e,v,cov,X)
       pv <- pchisq(t_st,1,lower.tail=FALSE)

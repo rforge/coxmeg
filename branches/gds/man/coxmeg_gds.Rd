@@ -27,7 +27,7 @@ coxmeg_gds(
 )
 }
 \arguments{
-\item{gds}{A GDS object created by \code{SNPRelate::snpgdsOpen}}
+\item{gds}{A GDS object created by \code{\link{snpgdsOpen}} or \code{\link{seqOpen}}.}
 
 \item{pheno}{A data.frame containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).}
 
@@ -125,24 +125,44 @@ for(i in 1:n_f)
 }
 sigma <- as.matrix(bdiag(mat_list))
 
-## Estimate variance component under a null model
+## Example data files
 pheno.file = system.file("extdata", "ex_pheno.txt", package = "coxmeg")
 cov.file = system.file("extdata", "ex_cov.txt", package = "coxmeg")
 bed = system.file("extdata", "example_null.bed", package = "coxmeg")
 bed = substr(bed,1,nchar(bed)-4)
 
+## Read phenotype and covariates
+pheno <- read.table(pheno.file, header=FALSE, as.is=TRUE, na.strings="-9")
+cov <- read.table(cov.file, header=FALSE, as.is=TRUE)
+
+## SNPRelate GDS object
 gdsfile <- tempfile()
 SNPRelate::snpgdsBED2GDS(bed.fn=paste0(bed,".bed"), 
                          fam.fn=paste0(bed,".fam"), 
                          bim.fn=paste0(bed,".bim"), 
                          out.gdsfn=gdsfile, verbose=FALSE)
 gds <- SNPRelate::snpgdsOpen(gdsfile)
-pheno <- read.table(pheno.file, header=FALSE, as.is=TRUE, na.strings="-9")
-cov <- read.table(cov.file, header=FALSE, as.is=TRUE)
+
+## Estimate variance component under a null model
 re <- coxmeg_gds(gds,pheno,sigma,type='bd',cov=cov,detap='diagonal',order=1)
 re
 
 SNPRelate::snpgdsClose(gds)
+unlink(gdsfile)
+
+## SeqArray GDS object
+gdsfile <- tempfile()
+SeqArray::seqBED2GDS(bed.fn=paste0(bed,".bed"), 
+                     fam.fn=paste0(bed,".fam"), 
+                     bim.fn=paste0(bed,".bim"), 
+                     out.gdsfn=gdsfile, verbose=FALSE)
+gds <- SeqArray::seqOpen(gdsfile)
+
+## Estimate variance component under a null model
+re <- coxmeg_gds(gds,pheno,sigma,type='bd',cov=cov,detap='diagonal',order=1)
+re
+
+SeqArray::seqClose(gds)
 unlink(gdsfile)
 }
 \keyword{Cox}

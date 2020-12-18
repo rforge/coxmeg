@@ -6,20 +6,38 @@ setGeneric(".gdsSNPList", function(gdsobj, ...) standardGeneric(".gdsSNPList"))
 setMethod(".gdsSelectSNP",
           "SNPGDSFileClass",
           function(gdsobj, sample.id=NULL, maf=NaN, missing.rate=NaN,
-                   remove.monosnp=TRUE, verbose=TRUE){
+                   verbose=TRUE){
               snpgdsSelectSNP(gdsobj, sample.id=sample.id,
                               maf=maf, missing.rate=missing.rate,
-                              remove.monosnp=remove.monosnp,
                               verbose=verbose,
+                              remove.monosnp=TRUE,
                               autosome.only=FALSE)
           })
 
+setMethod(".gdsSelectSNP",
+          "SeqVarGDSClass",
+          function(gdsobj, sample.id=NULL, maf=NaN, missing.rate=NaN,
+                   verbose=TRUE){
+              seqSetFilter(gdsobj, sample.id=sample.id, verbose=verbose)
+              seqSetFilterCond(gdsobj, maf=maf, missing.rate=missing.rate, 
+                               mac=1L, verbose=verbose)
+              seqGetData(gdsobj, "variant.id")
+          })
+
+
 setMethod(".gdsGetGeno",
           "SNPGDSFileClass",
-          function(gdsobj, sample.id=NULL, snp.id=NULL, 
-                   with.id=TRUE, verbose=TRUE){
+          function(gdsobj, sample.id=NULL, snp.id=NULL, verbose=TRUE){
               snpgdsGetGeno(gdsobj, sample.id=sample.id, snp.id=snp.id,
-                            with.id=with.id, verbose=verbose)
+                            with.id=FALSE, verbose=verbose)
+          })
+
+setMethod(".gdsGetGeno",
+          "SeqVarGDSClass",
+          function(gdsobj, sample.id=NULL, snp.id=NULL, verbose=TRUE){
+              seqSetFilter(gdsobj, sample.id=sample.id, variant.id=snp.id, 
+                           verbose=verbose)
+              seqGetData(gdsobj, "$dosage")
           })
 
 
@@ -27,4 +45,18 @@ setMethod(".gdsSNPList",
           "SNPGDSFileClass",
           function(gdsobj, sample.id=NULL){
               snpgdsSNPList(gdsobj, sample.id=sample.id)
+          })
+
+setMethod(".gdsSNPList",
+          "SeqVarGDSClass",
+          function(gdsobj, sample.id=NULL){
+              seqResetFilter(gdsobj, verbose=FALSE)
+              seqSetFilter(gdsobj, sample.id=sample.id, verbose=FALSE)
+              snp.id <- seqGetData(gdsobj, "variant.id")
+              chromosome <- seqGetData(gdsobj, "chromosome")
+              position <- seqGetData(gdsobj, "position")
+              allele <- sub(",", "/", seqGetData(gdsobj, "allele"))
+              afreq <- seqAlleleFreq(gdsobj)
+              data.frame(snp.id, chromosome, position, allele, afreq,
+                         stringsAsFactors=FALSE)
           })
