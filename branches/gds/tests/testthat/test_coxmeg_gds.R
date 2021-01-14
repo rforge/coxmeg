@@ -42,6 +42,7 @@ test_that("coxmeg_gds matches coxmeg_plink", {
 
 
 test_that("SNPRelate and SeqArray methods match", {
+    gdsfmt::showfile.gds(closeall=TRUE)
     snpfile <- SNPRelate::snpgdsExampleFileName()
     seqfile <- tempfile()
     SeqArray::seqSNP2GDS(snpfile, seqfile, verbose=FALSE)
@@ -79,6 +80,7 @@ test_that("SNPRelate and SeqArray methods match", {
 
 
 test_that("SNPRelate and SeqArray coxmeg_gds match", {
+    gdsfmt::showfile.gds(closeall=TRUE)
     snpfile <- SNPRelate::snpgdsExampleFileName()
     seqfile <- tempfile()
     SeqArray::seqSNP2GDS(snpfile, seqfile, verbose=FALSE)
@@ -113,4 +115,26 @@ test_that("SNPRelate and SeqArray coxmeg_gds match", {
     SNPRelate::snpgdsClose(snp)
     SeqArray::seqClose(seq)
     unlink(seqfile)
+})
+
+
+test_that("SeqArray utils respect variant filters", {
+    gdsfmt::showfile.gds(closeall=TRUE)
+    gdsfile <- seqExampleFileName()
+    gds <- seqOpen(gdsfile)
+    
+    x <- .gdsSelectSNP(gds, maf=0.01, verbose=FALSE)
+    seqSetFilter(gds, variant.sel=1:500)
+    x2 <- .gdsSelectSNP(gds, maf=0.01, verbose=FALSE)
+    expect_true(length(x) > length(x2))
+    
+    # with sample.id
+    seqResetFilter(gds, verbose=FALSE)
+    samp <- seqGetData(gds, "sample.id")[1:50]
+    x <- .gdsSelectSNP(gds, sample.id=samp, maf=0.01, verbose=FALSE)
+    seqSetFilter(gds, variant.sel=1:500, verbose=FALSE)
+    x2 <- .gdsSelectSNP(gds, sample.id=samp, maf=0.01, verbose=FALSE)
+    expect_true(length(x) > length(x2))
+    
+    seqClose(gds)  
 })

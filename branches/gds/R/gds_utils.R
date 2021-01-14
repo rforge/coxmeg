@@ -18,7 +18,9 @@ setMethod(".gdsSelectSNP",
           "SeqVarGDSClass",
           function(gdsobj, sample.id=NULL, maf=NaN, missing.rate=NaN,
                    verbose=TRUE){
-              seqSetFilter(gdsobj, sample.id=sample.id, verbose=verbose)
+              if (!is.null(sample.id)) {
+                  seqSetFilter(gdsobj, sample.id=sample.id, verbose=verbose)
+              }
               seqSetFilterCond(gdsobj, maf=maf, missing.rate=missing.rate, 
                                mac=1L, verbose=verbose)
               seqGetData(gdsobj, "variant.id")
