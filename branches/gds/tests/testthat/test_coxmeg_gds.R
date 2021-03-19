@@ -1,5 +1,15 @@
 context("test gds function")
 
+.testPheno <- function(sample.id, seed=25) {
+    n <- length(sample.id)
+    set.seed(seed)
+    time <- rnorm(n, mean=100, sd=10)
+    set.seed(seed)
+    status <- rbinom(n, 1, 0.4)
+    data.frame(family=sample.id, sample.id,
+               time, status, stringsAsFactors=FALSE)
+}
+
 .testSparseMatrix <- function(n, n_blocks) {
     n_f <- ceiling(n/n_blocks)
     mat_list <- list()
@@ -24,7 +34,7 @@ test_that("coxmeg_gds matches coxmeg_plink", {
     ## building a relatedness matrix
     sigma <- .testSparseMatrix(n=3000, n_blocks=5)
     
-    re.plink = coxmeg_plink(pheno.file,sigma,type='bd',bed=bed,tmp_dir=tempdir(),cov_file=cov.file)
+    re.plink = coxmeg_plink(pheno.file,sigma,type='bd',bed=bed,tmp_dir=tempdir(),cov_file=cov.file, verbose=FALSE)
     
     gdsfile <- tempfile()
     SNPRelate::snpgdsBED2GDS(bed.fn=paste0(bed,".bed"), fam.fn=paste0(bed,".fam"), bim.fn=paste0(bed,".bim"),
@@ -33,7 +43,7 @@ test_that("coxmeg_gds matches coxmeg_plink", {
     pheno <- read.table(pheno.file, header=FALSE, as.is=TRUE, na.strings="-9")
     cov <- read.table(cov.file, header=FALSE, as.is=TRUE)
     
-    re.gds <- coxmeg_gds(gds,pheno,sigma,type='bd',cov=cov)
+    re.gds <- coxmeg_gds(gds,pheno,sigma,type='bd',cov=cov,verbose=FALSE)
     expect_equal(re.plink, re.gds, tolerance=1e-5)
     
     SNPRelate::snpgdsClose(gds)
@@ -42,7 +52,7 @@ test_that("coxmeg_gds matches coxmeg_plink", {
 
 
 test_that("SNPRelate and SeqArray methods match", {
-    gdsfmt::showfile.gds(closeall=TRUE)
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
     snpfile <- SNPRelate::snpgdsExampleFileName()
     seqfile <- tempfile()
     SeqArray::seqSNP2GDS(snpfile, seqfile, verbose=FALSE)
@@ -80,7 +90,7 @@ test_that("SNPRelate and SeqArray methods match", {
 
 
 test_that("SNPRelate and SeqArray coxmeg_gds match", {
-    gdsfmt::showfile.gds(closeall=TRUE)
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
     snpfile <- SNPRelate::snpgdsExampleFileName()
     seqfile <- tempfile()
     SeqArray::seqSNP2GDS(snpfile, seqfile, verbose=FALSE)
@@ -89,17 +99,12 @@ test_that("SNPRelate and SeqArray coxmeg_gds match", {
     seq <- SeqArray::seqOpen(seqfile)
     
     sample.id <- seqGetData(seq, "sample.id")
-    n <- length(sample.id)
-    pheno <- data.frame(family=sample.id,
-                        sample.id=sample.id,
-                        time=rnorm(n, mean=100, sd=10),
-                        status=rbinom(n, 1, 0.4),
-                        stringsAsFactors=FALSE)
+    pheno <- .testPheno(sample.id, seed=5)
     
     # covariance matrix
     #covmat <- SNPRelate::snpgdsGRM(snp, verbose=FALSE)
     #sigma <- covmat$grm
-    sigma <- .testSparseMatrix(n=n, n_blocks=5)
+    sigma <- .testSparseMatrix(n=nrow(pheno), n_blocks=5)
     
     # set high MAF so test runs faster
     re.snp <- coxmeg_gds(snp, pheno, sigma, type='bd', maf=0.47, verbose=FALSE)
@@ -119,12 +124,12 @@ test_that("SNPRelate and SeqArray coxmeg_gds match", {
 
 
 test_that("SeqArray utils respect variant filters", {
-    gdsfmt::showfile.gds(closeall=TRUE)
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
     gdsfile <- seqExampleFileName()
     gds <- seqOpen(gdsfile)
     
     x <- .gdsSelectSNP(gds, maf=0.01, verbose=FALSE)
-    seqSetFilter(gds, variant.sel=1:500)
+    seqSetFilter(gds, variant.sel=1:500, verbose=FALSE)
     x2 <- .gdsSelectSNP(gds, maf=0.01, verbose=FALSE)
     expect_true(length(x) > length(x2))
     
@@ -137,4 +142,39 @@ test_that("SeqArray utils respect variant filters", {
     expect_true(length(x) > length(x2))
     
     seqClose(gds)  
+})
+
+
+test_that("SeqArray method respects sample filters", {
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
+    gdsfile <- SeqArray::seqExampleFileName()
+    gds <- SeqArray::seqOpen(gdsfile)
+    
+    sample.id <- SeqArray::seqGetData(gds, "sample.id")
+    pheno <- .testPheno(sample.id, seed=7)
+    sigma <- .testSparseMatrix(n=nrow(pheno), n_blocks=5)
+    
+    SeqArray::seqSetFilter(gds, sample.id=sample.id[1:50], variant.sel=1:1000, verbose=FALSE)
+    re <- coxmeg_gds(gds, pheno, sigma, type='bd', verbose=FALSE)
+    expect_true(re$nsam <= 50)
+    
+    SeqArray::seqClose(gds)  
+})
+
+
+test_that("SNPRelate method subsets to samples in GDS", {
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
+    snpfile <- SNPRelate::snpgdsExampleFileName()
+    
+    gds <- SNPRelate::snpgdsOpen(snpfile)
+    
+    sample.id <- SNPRelate::snpgdsSummary(gds, show=FALSE)$sample.id
+    sample.add <- c(sample.id, letters)
+    pheno <- .testPheno(sample.add, seed=9)
+    sigma <- .testSparseMatrix(n=nrow(pheno), n_blocks=7)
+    
+    re <- coxmeg_gds(gds, pheno, sigma, type='bd', maf=0.47, verbose=FALSE)
+    expect_true(re$nsam <= length(sample.id))
+    
+    SNPRelate::snpgdsClose(gds)
 })

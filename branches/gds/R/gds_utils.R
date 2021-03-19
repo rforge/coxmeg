@@ -1,7 +1,23 @@
 setOldClass("SNPGDSFileClass")
+setGeneric(".gdsHasSamp", function(gdsobj, ...) standardGeneric(".gdsHasSamp"))
 setGeneric(".gdsSelectSNP", function(gdsobj, ...) standardGeneric(".gdsSelectSNP"))
 setGeneric(".gdsGetGeno", function(gdsobj, ...) standardGeneric(".gdsGetGeno"))
 setGeneric(".gdsSNPList", function(gdsobj, ...) standardGeneric(".gdsSNPList"))
+
+setMethod(".gdsHasSamp",
+          "SNPGDSFileClass",
+          function(gdsobj, sample.id) {
+              gds.samp <- snpgdsSummary(gdsobj, show=FALSE)$sample.id
+              sample.id %in% gds.samp
+          })
+
+setMethod(".gdsHasSamp",
+          "SeqVarGDSClass",
+          function(gdsobj, sample.id) {
+              gds.samp <- seqGetData(gdsobj, "sample.id")
+              sample.id %in% gds.samp
+          })
+
 
 setMethod(".gdsSelectSNP",
           "SNPGDSFileClass",

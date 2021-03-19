@@ -30,7 +30,7 @@
 #' @param solver An optional binary value taking either 1 or 2. Default is 1. See details.
 #' @param maf An optional positive value. All SNPs with MAF<maf in the bed file will not be analyzed. Default is 0.05.
 #' @param score An optional logical value indicating whether to perform a score test. Default is FALSE.
-#' @param threshold An optional non-negative value. If threshold>0, coxmeg_m will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.
+#' @param threshold An optional non-negative value. If threshold>0, coxmeg_gds will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.
 #' @param order An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is NULL, which lets coxmeg choose an optimal order.
 #' @param verbose An optional logical value indicating whether to print additional messages. Default is TRUE.
 #' @param mc An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when \code{dense=TRUE} and \code{detap='slq'}. Default is 100.
@@ -125,6 +125,9 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
     covna = apply(as.matrix(cov[,3:ncol(cov)]),1,function(x) sum(is.na(x)))
     samind = which(!is.na(phenod[,3])&(!is.na(phenod[,4])&(covna==0)))
   }
+  
+  # remove any samples not included in GDS
+  samind <- samind & .gdsHasSamp(gds, phenod[,2])
   
   outcome = as.matrix(phenod[samind,c(3,4)])
   samid = as.character(phenod[samind,2])
