@@ -165,7 +165,6 @@ test_that("SeqArray method respects sample filters", {
 test_that("SNPRelate method subsets to samples in GDS", {
     gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
     snpfile <- SNPRelate::snpgdsExampleFileName()
-    
     gds <- SNPRelate::snpgdsOpen(snpfile)
     
     sample.id <- SNPRelate::snpgdsSummary(gds, show=FALSE)$sample.id
@@ -175,6 +174,40 @@ test_that("SNPRelate method subsets to samples in GDS", {
     
     re <- coxmeg_gds(gds, pheno, sigma, type='bd', maf=0.47, verbose=FALSE)
     expect_true(re$nsam <= length(sample.id))
+    
+    SNPRelate::snpgdsClose(gds)
+})
+
+
+test_that("SeqArray method selects snp.id", {
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
+    gdsfile <- SeqArray::seqExampleFileName()
+    gds <- SeqArray::seqOpen(gdsfile)
+    
+    sample.id <- SeqArray::seqGetData(gds, "sample.id")
+    pheno <- .testPheno(sample.id, seed=7)
+    sigma <- .testSparseMatrix(n=nrow(pheno), n_blocks=5)
+    
+    snp.id <- SeqArray::seqGetData(gds, "variant.id")[1:100]
+    re <- coxmeg_gds(gds, pheno, sigma, type='bd', snp.id=snp.id, maf=0, verbose=FALSE)
+    expect_true(nrow(re$summary) <= 100)
+    
+    SeqArray::seqClose(gds)
+})
+
+
+test_that("SNPRelate method selects snp.id", {
+    gdsfmt::showfile.gds(closeall=TRUE, verbose=FALSE)
+    snpfile <- SNPRelate::snpgdsExampleFileName()
+    gds <- SNPRelate::snpgdsOpen(snpfile)
+    
+    gdssum <- SNPRelate::snpgdsSummary(gds, show=FALSE)
+    pheno <- .testPheno(gdssum$sample.id, seed=9)
+    sigma <- .testSparseMatrix(n=nrow(pheno), n_blocks=7)
+    
+    snp.id <- gdssum$snp.id[1:100]
+    re <- coxmeg_gds(gds, pheno, sigma, type='bd', snp.id=snp.id, maf=0, verbose=FALSE)
+    expect_true(nrow(re$summary) <= 100)
     
     SNPRelate::snpgdsClose(gds)
 })

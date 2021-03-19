@@ -11,6 +11,7 @@ coxmeg_gds(
   type,
   cov = NULL,
   tau = NULL,
+  snp.id = NULL,
   maf = 0.05,
   min_tau = 1e-04,
   max_tau = 5,
@@ -39,7 +40,9 @@ coxmeg_gds(
 
 \item{tau}{An optional positive value for the variance component. If tau is given, the function will skip estimating the variance component, and use the given tau to analyze the SNPs.}
 
-\item{maf}{An optional positive value. All SNPs with MAF<maf in the bed file will not be analyzed. Default is 0.05.}
+\item{snp.id}{An optional vector of snp.id (or variant.id). Only these SNPs will be analyzed. Default is \code{NULL}, which selects all SNPs.}
+
+\item{maf}{An optional positive value. All SNPs with MAF<maf in the GDS file will not be analyzed. If \code{snp.id} is not \code{NULL}, both SNP filters will be applied in combination. Default is 0.05.}
 
 \item{min_tau}{An optional positive value indicating the lower bound in the optimization algorithm for the variance component tau. Default is 1e-4.}
 
@@ -55,7 +58,7 @@ coxmeg_gds(
 
 \item{score}{An optional logical value indicating whether to perform a score test. Default is FALSE.}
 
-\item{threshold}{An optional non-negative value. If threshold>0, coxmeg_m will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.}
+\item{threshold}{An optional non-negative value. If threshold>0, coxmeg_gds will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.}
 
 \item{solver}{An optional binary value taking either 1 or 2. Default is 1. See details.}
 

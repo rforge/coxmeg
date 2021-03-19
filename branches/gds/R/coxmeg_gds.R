@@ -28,7 +28,8 @@
 #' @param spd An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. See details.
 #' @param detap An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.
 #' @param solver An optional binary value taking either 1 or 2. Default is 1. See details.
-#' @param maf An optional positive value. All SNPs with MAF<maf in the bed file will not be analyzed. Default is 0.05.
+#' @param snp.id An optional vector of snp.id (or variant.id). Only these SNPs will be analyzed. Default is \code{NULL}, which selects all SNPs.
+#' @param maf An optional positive value. All SNPs with MAF<maf in the GDS file will not be analyzed. If \code{snp.id} is not \code{NULL}, both SNP filters will be applied in combination. Default is 0.05.
 #' @param score An optional logical value indicating whether to perform a score test. Default is FALSE.
 #' @param threshold An optional non-negative value. If threshold>0, coxmeg_gds will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.
 #' @param order An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is NULL, which lets coxmeg choose an optimal order.
@@ -101,7 +102,7 @@
 #' unlink(gdsfile)
 
 
-coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=NULL,detap=NULL,opt='bobyqa',score=FALSE,threshold=0,solver=NULL,spd=TRUE,mc=100,verbose=TRUE){
+coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,snp.id=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=NULL,detap=NULL,opt='bobyqa',score=FALSE,threshold=0,solver=NULL,spd=TRUE,mc=100,verbose=TRUE){
   
   if(eps<0)
   {eps <- 1e-6}
@@ -388,7 +389,7 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,maf=0.05,min_tau=1e
   
   # snp_info <- SNPRelate::snpgdsSNPRateFreq(genofile,with.id=TRUE)
   #snp_ind = SNPRelate::snpgdsSelectSNP(genofile,sample.id=samid,maf=maf,missing.rate=0,remove.monosnp=TRUE)
-  snp_ind <- .gdsSelectSNP(gds, sample.id=samid, maf=maf, missing.rate=0, verbose=verbose)
+  snp_ind <- .gdsSelectSNP(gds, sample.id=samid, snp.id=snp.id, maf=maf, missing.rate=0, verbose=verbose)
   
   nsnp = length(snp_ind)
   blocks = max(100,ceiling(5e6/n))
