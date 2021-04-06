@@ -43,22 +43,24 @@ We create a data.frame of simulated time-to-event outcomes. The first two column
 sample.id <- read.gdsn(index.gdsn(snp, "sample.id"))
 family.id <- read.gdsn(index.gdsn(snp, "sample.annot/family.id"))
 n <- length(sample.id)
-set.seed(25)
+set.seed(5)
 time <- rnorm(n, mean=100, sd=10)
-set.seed(26)
+set.seed(6)
 status <- rbinom(n, 1, 0.4)
 pheno <- data.frame(family.id, sample.id, time, status,
                     stringsAsFactors=FALSE)
 head(pheno)
 ```
 
-We will adjust for sex and population group as covariates in the model. As in the outcome data.frame, family id and sample id are the first two columns.
+We will adjust for sex and population group as covariates in the model. As in the outcome data.frame, family id and sample id are the first two columns. Categorical variables need to be converted to dummy variables, so we utilize the `model.matrix` function to prepare the covariates.
 
 ```{r}
 sex <- read.gdsn(index.gdsn(snp, "sample.annot/sex"))
 pop <- read.gdsn(index.gdsn(snp, "sample.annot/pop.group"))
-cov <- data.frame(family.id, sample.id, sex, pop,
-                  stringsAsFactors=FALSE)
+cov <- data.frame(sex, pop)
+head(cov)
+mm <- model.matrix(~ sex + pop, cov)
+cov <- cbind(pheno[,1:2], mm[,-1])
 head(cov)
 ```
 
