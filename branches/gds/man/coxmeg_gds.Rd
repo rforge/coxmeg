@@ -168,6 +168,9 @@ re
 SeqArray::seqClose(gds)
 unlink(gdsfile)
 }
+\author{
+Liang He, Stephanie Gogarten
+}
 \keyword{Cox}
 \keyword{mixed-effects}
 \keyword{model}

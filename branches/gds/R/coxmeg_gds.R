@@ -42,6 +42,7 @@
 #' @return tau: The estimated variance component.
 #' @return rank: The rank of the relatedness matrix.
 #' @return nsam: Actual sample size.
+#' @author Liang He, Stephanie Gogarten
 #' @keywords Cox mixed-effects model
 #' @export coxmeg_gds
 #' @examples

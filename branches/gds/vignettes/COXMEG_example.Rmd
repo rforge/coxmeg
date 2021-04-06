@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 bibliography: "references.bib"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Cox Mixed-Effects Model for Genome-Wide Association Studies}
+  %\VignetteIndexEntry{Cox Mixed-Effects Models for Genome-Wide Association Studies}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
