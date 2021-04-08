@@ -4,11 +4,28 @@
 \alias{coxmeg_plink}
 \title{Perform GWAS using a Cox mixed-effects model with plink files as input}
 \usage{
-coxmeg_plink(pheno, corr, type, bed = NULL, tmp_dir = NULL,
-  cov_file = NULL, tau = NULL, maf = 0.05, min_tau = 1e-04,
-  max_tau = 5, eps = 1e-06, order = NULL, detap = NULL,
-  opt = "bobyqa", score = FALSE, threshold = 0, solver = NULL,
-  spd = TRUE, mc = 100, verbose = TRUE)
+coxmeg_plink(
+  pheno,
+  corr,
+  type,
+  bed = NULL,
+  tmp_dir = NULL,
+  cov_file = NULL,
+  tau = NULL,
+  maf = 0.05,
+  min_tau = 1e-04,
+  max_tau = 5,
+  eps = 1e-06,
+  order = NULL,
+  detap = NULL,
+  opt = "bobyqa",
+  score = FALSE,
+  threshold = 0,
+  solver = NULL,
+  spd = TRUE,
+  mc = 100,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{pheno}{A string value indicating the file name or the full path of a pheno file. The files must be in the working directory if the full path is not given. The file is in plink pheno format, containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).}
@@ -31,7 +48,7 @@ coxmeg_plink(pheno, corr, type, bed = NULL, tmp_dir = NULL,
 
 \item{max_tau}{An optional positive value indicating the upper bound in the optimization algorithm for the variance component tau. Default is 5.}
 
-\item{eps}{An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.}
+\item{eps}{An optional positive value indicating the relative convergence tolerance in the optimization algorithm. Default is 1e-6. A smaller value (e.g., 1e-8) can be used for better precision of the p-values in the situation where most SNPs under investigation have a very low minor allele count (<5).}
 
 \item{order}{An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is NULL, which lets coxmeg choose an optimal order.}
 

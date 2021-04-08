@@ -4,10 +4,27 @@
 \alias{coxmeg_m}
 \title{Fit a Cox mixed-effects model for estimating HRs for a set of predictors}
 \usage{
-coxmeg_m(X, outcome, corr, type, FID = NULL, cov = NULL, tau = NULL,
-  min_tau = 1e-04, max_tau = 5, eps = 1e-06, order = NULL,
-  detap = NULL, opt = "bobyqa", score = FALSE, threshold = 0,
-  solver = NULL, spd = TRUE, verbose = TRUE, mc = 100)
+coxmeg_m(
+  X,
+  outcome,
+  corr,
+  type,
+  FID = NULL,
+  cov = NULL,
+  tau = NULL,
+  min_tau = 1e-04,
+  max_tau = 5,
+  eps = 1e-06,
+  order = NULL,
+  detap = NULL,
+  opt = "bobyqa",
+  score = FALSE,
+  threshold = 0,
+  solver = NULL,
+  spd = TRUE,
+  verbose = TRUE,
+  mc = 100
+)
 }
 \arguments{
 \item{X}{A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
@@ -28,7 +45,7 @@ coxmeg_m(X, outcome, corr, type, FID = NULL, cov = NULL, tau = NULL,
 
 \item{max_tau}{An optional positive value indicating the upper bound in the optimization algorithm for the variance component \code{tau}. Default is 5.}
 
-\item{eps}{An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.}
+\item{eps}{An optional positive value indicating the relative convergence tolerance in the optimization algorithm. Default is 1e-6. A smaller value (e.g., 1e-8) can be used for better precision of the p-values in the situation where most SNPs under investigation have a very low minor allele count (<5).}
 
 \item{order}{An optional integer value starting from 0. Only valid when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is NULL, which lets coxmeg choose an optimal order.}
 

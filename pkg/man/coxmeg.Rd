@@ -4,10 +4,23 @@
 \alias{coxmeg}
 \title{Fit a Cox mixed-effects model}
 \usage{
-coxmeg(outcome, corr, type, X = NULL, FID = NULL, eps = 1e-06,
-  min_tau = 1e-04, max_tau = 5, order = 1, detap = NULL,
-  opt = "bobyqa", solver = NULL, spd = TRUE, verbose = TRUE,
-  mc = 100)
+coxmeg(
+  outcome,
+  corr,
+  type,
+  X = NULL,
+  FID = NULL,
+  eps = 1e-06,
+  min_tau = 1e-04,
+  max_tau = 5,
+  order = 1,
+  detap = NULL,
+  opt = "bobyqa",
+  solver = NULL,
+  spd = TRUE,
+  verbose = TRUE,
+  mc = 100
+)
 }
 \arguments{
 \item{outcome}{A matrix contains time (first column) and status (second column). The status is a binary variable (1 for events / 0 for censored).}
@@ -20,7 +33,7 @@ coxmeg(outcome, corr, type, X = NULL, FID = NULL, eps = 1e-06,
 
 \item{FID}{An optional string vector of family ID. If provided, the data will be reordered according to the family ID.}
 
-\item{eps}{An optional positive scalar indicating the tolerance in the optimization algorithm. Default is 1e-6.}
+\item{eps}{An optional positive scalar indicating the relative convergence tolerance in the optimization algorithm. Default is 1e-6.}
 
 \item{min_tau}{An optional positive scalar indicating the lower bound in the optimization algorithm for the variance component \code{tau}. Default is 1e-4.}
 

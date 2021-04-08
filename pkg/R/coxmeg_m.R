@@ -19,7 +19,7 @@
 #' @param cov An optional matrix of the covariates included in the null model for estimating the variance component. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the covariates are columns. 
 #' @param FID An optional string vector of family ID. If provided, the data will be reordered according to the family ID.
 #' @param tau An optional positive value for the variance component. If \code{tau} is given, the function will skip estimating the variance component, and use the given \code{tau} to analyze the predictors.
-#' @param eps An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.
+#' @param eps An optional positive value indicating the relative convergence tolerance in the optimization algorithm. Default is 1e-6. A smaller value (e.g., 1e-8) can be used for better precision of the p-values in the situation where most SNPs under investigation have a very low minor allele count (<5).
 #' @param min_tau An optional positive value indicating the lower bound in the optimization algorithm for the variance component \code{tau}. Default is 1e-4.
 #' @param max_tau An optional positive value indicating the upper bound in the optimization algorithm for the variance component \code{tau}. Default is 5.
 #' @param opt An optional logical value for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.
@@ -93,8 +93,16 @@ coxmeg_m <- function(X,outcome,corr,type,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-0
   }
   
   X = as.matrix(X)
+  outcome <- as.matrix(outcome)
   if(is.null(cov)==FALSE)
   {cov = as.matrix(cov)}
+  
+  nro = nrow(outcome)
+  if((nro!=nrow(corr)) || (nro!=ncol(corr)))
+  {stop("The phenotype and the relatedness matrix have different sample sizes.")}
+  
+  if(nro!=nrow(X))
+  {stop("The phenotype and predictor matrices have different sample sizes.")}
   
   ## family structure
   if(is.null(FID)==FALSE)
@@ -106,11 +114,6 @@ coxmeg_m <- function(X,outcome,corr,type,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-0
     corr <- corr[ord,ord]
     if(is.null(cov)==FALSE)
     {cov <- as.matrix(cov[ord,])}
-  }else{
-    X <- as.matrix(X)
-    outcome <- as.matrix(outcome)
-    if(is.null(cov)==FALSE)
-    {cov <- as.matrix(cov)}
   }
   
   min_d <- min(outcome[which(outcome[,2]==1),1])

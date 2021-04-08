@@ -14,7 +14,7 @@
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
 #' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.
 #' @param FID An optional string vector of family ID. If provided, the data will be reordered according to the family ID.
-#' @param eps An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.
+#' @param eps An optional positive value indicating the relative convergence tolerance in the optimization algorithm. Default is 1e-6.
 #' @param spd An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. 
 #' @param solver An optional bianry value that can be either 1 (Cholesky Decomposition using RcppEigen), 2 (PCG) or 3 (Cholesky Decomposition using Matrix). Default is NULL, which lets the function select a solver. See details.
 #' @param verbose An optional logical value indicating whether to print additional messages. Default is TRUE.
@@ -58,13 +58,19 @@
 #' re = fit_ppl(x,outcome,sigma,type='bd',tau=0.5,order=1)
 #' re
 
-fit_ppl <- function(X,outcome,corr,type,tau=0.5,FID=NULL,eps=1e-06,order=1,solver=NULL,spd=TRUE,verbose=TRUE){
+fit_ppl <- function(X,outcome,corr,type,tau=0.5,FID=NULL,eps=1e-6,order=1,solver=NULL,spd=TRUE,verbose=TRUE){
 
   if(eps<0)
-  {eps <- 1e-06}
+  {eps <- 1e-6}
   
   if(!(type %in% c('bd','sparse','dense')))
   {stop("The type argument should be 'bd', 'sparse' or 'dense'.")}
+  
+  X <- as.matrix(X)
+  outcome <- as.matrix(outcome)
+  
+  if(nrow(outcome)!=nrow(X))
+  {stop("The phenotype and predictor matrices have different sample sizes.")}
   
   ## family structure
   if(is.null(FID)==FALSE)
@@ -74,9 +80,6 @@ fit_ppl <- function(X,outcome,corr,type,tau=0.5,FID=NULL,eps=1e-06,order=1,solve
     X <- as.matrix(X[ord,,drop = FALSE])
     outcome <- as.matrix(outcome[ord,,drop = FALSE])
     corr <- corr[ord,ord,drop = FALSE]
-  }else{
-    X <- as.matrix(X)
-    outcome <- as.matrix(outcome)
   }
   
   min_d <- min(outcome[which(outcome[,2]==1),1])
@@ -105,6 +108,7 @@ fit_ppl <- function(X,outcome,corr,type,tau=0.5,FID=NULL,eps=1e-06,order=1,solve
   }
   
   n <- nrow(outcome)
+    
   if(min(outcome[,2] %in% c(0,1))<1)
   {stop("The status should be either 0 (censored) or 1 (failure).")}
   u <- rep(0,n)

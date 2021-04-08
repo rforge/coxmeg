@@ -17,7 +17,7 @@
 #' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.
 #' @param X An optional matrix of the preidctors with fixed effects. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns. 
 #' @param FID An optional string vector of family ID. If provided, the data will be reordered according to the family ID.
-#' @param eps An optional positive scalar indicating the tolerance in the optimization algorithm. Default is 1e-6.
+#' @param eps An optional positive scalar indicating the relative convergence tolerance in the optimization algorithm. Default is 1e-6.
 #' @param min_tau An optional positive scalar indicating the lower bound in the optimization algorithm for the variance component \code{tau}. Default is 1e-4.
 #' @param max_tau An optional positive scalar indicating the upper bound in the optimization algorithm for the variance component \code{tau} Default is 5.
 #' @param opt An optional logical scalar for the Optimization algorithm for tau. Can have the following values: 'bobyqa', 'Brent' or 'NM'. Default is 'bobyqa'.
@@ -82,21 +82,32 @@ coxmeg <- function(outcome,corr,type,X=NULL,FID=NULL,eps=1e-6, min_tau=1e-04,max
     if(!(detap %in% c('exact','slq','diagonal')))
     {stop("The detap argument should be 'exact', 'diagonal' or 'slq'.")}
   }
+  
+  if(is.null(X)==FALSE)
+  {
+    X <- as.matrix(X)
+  }
+  outcome <- as.matrix(outcome)
+  
+  nro = nrow(outcome)
+  if((nro!=nrow(corr)) || (nro!=ncol(corr)))
+  {stop("The phenotype and the relatedness matrix have different sample sizes.")}
+  
+  if(is.null(X)==FALSE)
+  {
+    if(nro!=nrow(X))
+    {stop("The phenotype and predictor matrices have different sample sizes.")}
+  }
     
   ## family structure
   if(is.null(FID)==FALSE)
   {
     ord <- order(FID)
     FID <- as.character(FID[ord])
-    X <- as.matrix(X[ord,])
+    if(is.null(X)==FALSE)
+    {X <- as.matrix(X[ord,])}
     outcome <- as.matrix(outcome[ord,])
     corr <- corr[ord,ord]
-  }else{
-    if(is.null(X)==FALSE)
-    {
-      X <- as.matrix(X)
-    }
-    outcome <- as.matrix(outcome)
   }
   
   min_d <- min(outcome[which(outcome[,2]==1),1])

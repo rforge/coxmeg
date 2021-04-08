@@ -1,16 +1,12 @@
 
-#' Perform GWAS using a Cox mixed-effects model with plink files as input
+#' Perform GWAS using a Cox mixed-effects model with GDS files as input
 #'
-#' \code{coxmeg_plink} first estimates the variance component under a null model with only cov if tau is not given, and then analyzing each SNP in the plink files.
+#' \code{coxmeg_gds} first estimates the variance component under a null model with only cov if tau is not given, and then analyzing each SNP in the gds file.
 #' 
 #' @section About \code{type}:
 #' 'bd' is used for a block-diagonal relatedness matrix, or a sparse matrix the inverse of which is also sparse. 'sparse' is used for a general sparse relatedness matrix the inverse of which is not sparse. 
 #' @section About \code{corr}:
-#' The subjects in \code{corr} must be in the same order as in the plink fam file.
-#' @section About missing values:
-#' \code{pheno} -9 for missing values, \code{cov_file} NA for missing values.
-#' @section About temporary files:
-#' The function will create a temporary gds file with approximately the same size as the bed file. The temporary file will be removed when the analysis is done.
+#' The subjects in \code{corr} must be in the same order as in \code{pheno} and \code{cov}.
 #' @section About \code{spd}:
 #' When \code{spd=TRUE}, the relatedness matrix is treated as SPD. If the matrix is SPSD or not sure, set \code{spd=FALSE}. 
 #' @section About \code{solver}:
@@ -19,13 +15,12 @@
 #' When \code{detap='exact'}, the exact log-determinant is computed for estimating the variance component. Specifying \code{detap='diagonal'} uses diagonal approximation, and is only effective for a sparse relatedness matrix. Specifying \code{detap='slq'} uses stochastic lanczos quadrature approximation.
 #' 
 #' 
-#' @param pheno A string value indicating the file name or the full path of a pheno file. The files must be in the working directory if the full path is not given. The file is in plink pheno format, containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored).
+#' @param gds A GDS object created by \code{\link{snpgdsOpen}} or \code{\link{seqOpen}}.
+#' @param pheno A data.frame containing the following four columns, family ID, individual ID, time and status. The status is a binary variable (1 for events/0 for censored). Missing values should be denoted as NA.
 #' @param corr A relatedness matrix. Can be a matrix or a 'dgCMatrix' class in the Matrix package. Must be symmetric positive definite or symmetric positive semidefinite.
 #' @param type A string indicating the sparsity structure of the relatedness matrix. Should be 'bd' (block diagonal), 'sparse', or 'dense'. See details.
-#' @param bed A optional string value indicating the file name or the full path of a plink bed file (without .bed). The files must be in the working directory if the full path is not given. If not provided, only the variance component will be returned.
-#' @param tmp_dir A optional directory to store temporary .gds files. The directory needs to be specified when \code{bed} is provided. 
 #' @param tau An optional positive value for the variance component. If tau is given, the function will skip estimating the variance component, and use the given tau to analyze the SNPs.
-#' @param cov_file An optional string value indicating the file name or the full path of a covariate file. The files must be in the working directory if the full path is not given. Same as the cov file in plink, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables.
+#' @param cov An optional data.frame of covariates. Same as \code{pheno}, the first two columns are family ID and individual ID. The covariates are included in the null model for estimating the variance component. The covariates can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Missing values should be denoted as NA.
 #' @param eps An optional positive value indicating the relative convergence tolerance in the optimization algorithm. Default is 1e-6. A smaller value (e.g., 1e-8) can be used for better precision of the p-values in the situation where most SNPs under investigation have a very low minor allele count (<5).
 #' @param min_tau An optional positive value indicating the lower bound in the optimization algorithm for the variance component tau. Default is 1e-4.
 #' @param max_tau An optional positive value indicating the upper bound in the optimization algorithm for the variance component tau. Default is 5.
@@ -33,9 +28,10 @@
 #' @param spd An optional logical value indicating whether the relatedness matrix is symmetric positive definite. Default is TRUE. See details.
 #' @param detap An optional string indicating whether to use approximation for log-determinant. Can be 'exact', 'diagonal' or 'slq'. Default is NULL, which lets the function select a method based on 'type' and other information. See details.
 #' @param solver An optional binary value taking either 1 or 2. Default is 1. See details.
-#' @param maf An optional positive value. All SNPs with MAF<maf in the bed file will not be analyzed. Default is 0.05.
+#' @param snp.id An optional vector of snp.id (or variant.id). Only these SNPs will be analyzed. Default is \code{NULL}, which selects all SNPs.
+#' @param maf An optional positive value. All SNPs with MAF<maf in the GDS file will not be analyzed. If \code{snp.id} is not \code{NULL}, both SNP filters will be applied in combination. Default is 0.05.
 #' @param score An optional logical value indicating whether to perform a score test. Default is FALSE.
-#' @param threshold An optional non-negative value. If threshold>0, coxmeg_m will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.
+#' @param threshold An optional non-negative value. If threshold>0, coxmeg_gds will reestimate HRs for those SNPs with a p-value<threshold by first estimating a variant-specific variance component. Default is 0.
 #' @param order An optional integer value starting from 0. Only effective when \code{dense=FALSE}. It specifies the order of approximation used in the inexact newton method. Default is NULL, which lets coxmeg choose an optimal order.
 #' @param verbose An optional logical value indicating whether to print additional messages. Default is TRUE.
 #' @param mc An optional integer value specifying the number of Monte Carlo samples used for approximating the log-determinant. Only valid when \code{dense=TRUE} and \code{detap='slq'}. Default is 100.
@@ -46,8 +42,9 @@
 #' @return tau: The estimated variance component.
 #' @return rank: The rank of the relatedness matrix.
 #' @return nsam: Actual sample size.
+#' @author Liang He, Stephanie Gogarten
 #' @keywords Cox mixed-effects model
-#' @export coxmeg_plink
+#' @export coxmeg_gds
 #' @examples
 #' library(Matrix)
 #' library(MASS)
@@ -65,17 +62,48 @@
 #' }
 #' sigma <- as.matrix(bdiag(mat_list))
 #' 
-#' ## Estimate variance component under a null model
-#' pheno = system.file("extdata", "ex_pheno.txt", package = "coxmeg")
-#' cov = system.file("extdata", "ex_cov.txt", package = "coxmeg")
+#' ## Example data files
+#' pheno.file = system.file("extdata", "ex_pheno.txt", package = "coxmeg")
+#' cov.file = system.file("extdata", "ex_cov.txt", package = "coxmeg")
 #' bed = system.file("extdata", "example_null.bed", package = "coxmeg")
 #' bed = substr(bed,1,nchar(bed)-4)
-#' re = coxmeg_plink(pheno,sigma,type='bd',bed=bed,tmp_dir=tempdir(),cov_file=cov,
-#' detap='diagonal',order=1)
+#' 
+#' ## Read phenotype and covariates
+#' pheno <- read.table(pheno.file, header=FALSE, as.is=TRUE, na.strings="-9")
+#' cov <- read.table(cov.file, header=FALSE, as.is=TRUE)
+#' 
+#' ## SNPRelate GDS object
+#' gdsfile <- tempfile()
+#' SNPRelate::snpgdsBED2GDS(bed.fn=paste0(bed,".bed"), 
+#'                          fam.fn=paste0(bed,".fam"), 
+#'                          bim.fn=paste0(bed,".bim"), 
+#'                          out.gdsfn=gdsfile, verbose=FALSE)
+#' gds <- SNPRelate::snpgdsOpen(gdsfile)
+#' 
+#' ## Estimate variance component under a null model
+#' re <- coxmeg_gds(gds,pheno,sigma,type='bd',cov=cov,detap='diagonal',order=1)
 #' re
+#' 
+#' SNPRelate::snpgdsClose(gds)
+#' unlink(gdsfile)
+#' 
+#' ## SeqArray GDS object
+#' gdsfile <- tempfile()
+#' SeqArray::seqBED2GDS(bed.fn=paste0(bed,".bed"), 
+#'                      fam.fn=paste0(bed,".fam"), 
+#'                      bim.fn=paste0(bed,".bim"), 
+#'                      out.gdsfn=gdsfile, verbose=FALSE)
+#' gds <- SeqArray::seqOpen(gdsfile)
+#' 
+#' ## Estimate variance component under a null model
+#' re <- coxmeg_gds(gds,pheno,sigma,type='bd',cov=cov,detap='diagonal',order=1)
+#' re
+#' 
+#' SeqArray::seqClose(gds)
+#' unlink(gdsfile)
 
 
-coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=NULL,detap=NULL,opt='bobyqa',score=FALSE,threshold=0,solver=NULL,spd=TRUE,mc=100,verbose=TRUE){
+coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,snp.id=NULL,maf=0.05,min_tau=1e-04,max_tau=5,eps=1e-6,order=NULL,detap=NULL,opt='bobyqa',score=FALSE,threshold=0,solver=NULL,spd=TRUE,mc=100,verbose=TRUE){
   
   if(eps<0)
   {eps <- 1e-6}
@@ -92,53 +120,21 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
     {stop("The detap argument should be 'exact', 'diagonal' or 'slq'.")}
   }
   
-  if(is.null(bed)==FALSE)
-  {
-    if((is.null(tmp_dir)==TRUE) || (file.exists(tmp_dir)==FALSE))
-    {stop('The temporary directory is not specified or does not exist.')}
-  }
-  
-  cd = getwd()
-  
-  if(is.null(bed)==FALSE)
-  {
-    bedbimfam.fn = paste0(bed,c('.bed','.fam','.bim'))
-    
-    if((sum(file.exists(bedbimfam.fn))<3))
-    {
-      bedbimfam.fn = paste0(cd,'/',bed,c('.bed','.fam','.bim'))
-      if((sum(file.exists(bedbimfam.fn))<3))
-      {stop('Cannot find the genotype files.')}
-    }
-  }
-  
-  pheno.fn = paste0(cd,'/',pheno)
-  pfs = c(pheno,pheno.fn)
-  if(sum(file.exists(pfs))<1)
-  {
-    stop('Cannot find the phenotype file.')
-  }else{
-    phenod = read.table(pfs[file.exists(pfs)][1],header=FALSE,stringsAsFactors=FALSE)  
-  }
-  
-  cov.fn = cov = NULL
-  if(is.null(cov_file)==FALSE)
-  {
-    cov.fn = paste0(cd,'/',cov_file)
-    pfs = c(cov_file,cov.fn)
-    if(sum(file.exists(pfs))>0)
-    {
-      cov = read.table(pfs[file.exists(pfs)][1],header=FALSE,na.strings = "NA",stringsAsFactors=FALSE)
-    }else{
-      stop('Cannot find the covariate file.')
-    }
-  }
+  phenod <- pheno
   
   if(is.null(cov)==TRUE)
-  {samind = which((phenod[,3]!=-9)&(phenod[,4]!=-9))}else{
+  {samind = which(!is.na(phenod[,3])&(!is.na(phenod[,4])))}else{
     covna = apply(as.matrix(cov[,3:ncol(cov)]),1,function(x) sum(is.na(x)))
-    samind = which((phenod[,3]!=-9)&(phenod[,4]!=-9)&(covna==0))
+    samind = which(!is.na(phenod[,3])&(!is.na(phenod[,4])&(covna==0)))
   }
+  
+  # remove any samples not included in GDS
+  # samind <- samind & .gdsHasSamp(gds, phenod[,2])
+  samind <- samind[which(.gdsHasSamp(gds, phenod[samind,2])==TRUE)]
+  samind <- samind[order(match(as.character(phenod[samind,2]),as.character(.gdsGetSamp(gds))))]
+  
+  if(verbose==TRUE)
+  {message(paste0('There are ', length(samind), ' subjects who have genotype data and have no missing phenotype or covariates.'))}
   
   outcome = as.matrix(phenod[samind,c(3,4)])
   samid = as.character(phenod[samind,2])
@@ -203,7 +199,7 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
   rs <- rs_sum(rk-1,d_v[ind[,1]])
   if(spd==FALSE)
   {
-    rk_cor = matrix.rank(as.matrix(corr),method='chol')
+    rk_cor = matrixcalc::matrix.rank(as.matrix(corr),method='chol')
     spsd = FALSE
     if(rk_cor<n)
     {spsd = TRUE}
@@ -216,7 +212,9 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
     {message(paste0('There is/are ',k,' covariates. The sample size included is ',n,'.'))}
   }
   
-  nz <- nnzero(corr)
+  nz <- Matrix::nnzero(corr)
+  #if(nz>(n*n/2))
+  #{type <- 'dense'}
   if( nz > ((as.double(n)^2)/2) )
   {type <- 'dense'}
   
@@ -375,7 +373,7 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
     tau_e = 0.5 
     new_t = switch(
       opt,
-      'bobyqa' = bobyqa(tau_e, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order_t,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,solver=solver,rad=rad),
+      'bobyqa' = nloptr::bobyqa(tau_e, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order_t,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,solver=solver,rad=rad),
       'Brent' = optim(tau_e, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order_t,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,method='Brent',eigen=eigen,solver=solver,rad=rad),
       'NM' = optim(tau_e, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=cov, d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order_t,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,method='Nelder-Mead',eigen=eigen,solver=solver,rad=rad),
       stop("The argument opt should be bobyqa, Brent or NM.")
@@ -394,21 +392,12 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
     tau_e = tau
   }
   
-  if(is.null(bed)==TRUE)
-  {
-    res = list(tau=tau_e,iter=iter,rank=rk_cor,nsam=n)
-    return(res)
-  }
-  
   if(verbose==TRUE)
   {message(paste0('The variance component is estimated. Start analyzing SNPs...'))}
   
-  gds.fn = paste0("tmp_",floor(runif(1,0,1)*1e8),".gds")
-  gds.fn = file.path(tmp_dir,gds.fn)
-  snpgdsBED2GDS(bedbimfam.fn[1], bedbimfam.fn[2], bedbimfam.fn[3], gds.fn,verbose=verbose)
-  genofile <- snpgdsOpen(gds.fn,allow.duplicate=TRUE)
-  # snp_info <- snpgdsSNPRateFreq(genofile,with.id=TRUE)
-  snp_ind = snpgdsSelectSNP(genofile,sample.id=samid,maf=maf,missing.rate=0,remove.monosnp=TRUE)
+  # snp_info <- SNPRelate::snpgdsSNPRateFreq(genofile,with.id=TRUE)
+  #snp_ind = SNPRelate::snpgdsSelectSNP(genofile,sample.id=samid,maf=maf,missing.rate=0,remove.monosnp=TRUE)
+  snp_ind <- .gdsSelectSNP(gds, sample.id=samid, snp.id=snp.id, maf=maf, missing.rate=0, verbose=verbose)
   
   nsnp = length(snp_ind)
   blocks = max(100,ceiling(5e6/n))
@@ -421,7 +410,7 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
     ep[length(ep)] = nsnp
   }
   
-  # genofile <- snpgdsOpen(gds.fn,allow.duplicate=TRUE)
+  # genofile <- SNPRelate::snpgdsOpen(gds.fn,allow.duplicate=TRUE)
   
   if(score==FALSE)
   {
@@ -432,8 +421,9 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
     for(bi in 1:nblock)
     {  
       snp_t = sp[bi]:ep[bi]
-      X = snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
-      X = X$genotype
+      #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[snp_t], verbose=FALSE)
+      #X = X$genotype
       
       p <- ncol(X)
       c_ind <- c()
@@ -464,11 +454,11 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
         if(is.null(order))
         {
           x_test = matrix(sample(c(rep(1,floor(nrow(X)/2)),rep(0,ceiling(nrow(X)/2))),replace = FALSE),n,1)
-          est_t = microbenchmark(irls_fast_ap(0, u, tau_e, si_d, sigma_i_s, x_test, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,1,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver),times=2)
+          est_t = microbenchmark::microbenchmark(irls_fast_ap(0, u, tau_e, si_d, sigma_i_s, x_test, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,1,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver),times=2)
           est_t = mean(est_t$time)
           for(ord_o in 2:10)
           {
-            est_c = microbenchmark(irls_fast_ap(0, u, tau_e, si_d, sigma_i_s, x_test, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,ord_o,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver),times=2)
+            est_c = microbenchmark::microbenchmark(irls_fast_ap(0, u, tau_e, si_d, sigma_i_s, x_test, eps, d_v, ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,ord_o,det=FALSE,detap=detap,sigma_s=corr,s_d=s_d,eigen=eigen,solver=solver),times=2)
             est_c = mean(est_c$time)
             if(est_c<(0.9*est_t))
             {
@@ -511,8 +501,9 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
       if(verbose==TRUE)
       {message(paste0('Finish analyzing SNPs. Start analyzing top SNPs using a variant-specific variance component...'))}
       
-      X = snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[top],with.id=TRUE,verbose=FALSE)
-      X = X$genotype
+      #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[top],with.id=TRUE,verbose=FALSE)
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[top], verbose=FALSE)
+      #X = X$genotype
       p <- ncol(X)
       c_ind <- c()
       if(k>0)
@@ -527,7 +518,7 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
       {
         if(opt=='bobyqa')
         {
-          new_t <- bobyqa(tau, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=as.matrix(X[,c(i,c_ind)]), d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order_t,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,solver=solver,rad=rad)
+          new_t <- nloptr::bobyqa(tau, mll, type=type, beta=beta,u=u,si_d=si_d,sigma_i_s=sigma_i_s,X=as.matrix(X[,c(i,c_ind)]), d_v=d_v, ind=ind, rs_rs=rs$rs_rs, rs_cs=rs$rs_cs,rs_cs_p=rs$rs_cs_p,rk_cor=rk_cor,order=order_t,det=TRUE,detap=detap,inv=inv,sigma_s=corr,s_d=s_d,eps=eps,lower=min_tau,upper=max_tau,eigen=eigen,solver=solver,rad=rad)
         }else{
           if(opt=='Brent')
           {
@@ -605,8 +596,9 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
     for(bi in 1:nblock)
     {  
       snp_t = sp[bi]:ep[bi]
-      X = snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
-      X = X$genotype
+      #X = SNPRelate::snpgdsGetGeno(genofile, sample.id=samid,snp.id=snp_ind[snp_t],with.id=TRUE,verbose=FALSE)
+      X = .gdsGetGeno(gds, sample.id=samid, snp.id=snp_ind[snp_t], verbose=FALSE)
+      #X = X$genotype
       
       t_st <- score_test(deriv,bw_v,w_v,rs$rs_rs-1,rs$rs_cs-1,rs$rs_cs_p-1,ind-1,a_v_p,a_v_2,tau_e,v,cov,X)
       pv <- pchisq(t_st,1,lower.tail=FALSE)
@@ -615,14 +607,15 @@ coxmeg_plink <- function(pheno,corr,type,bed=NULL,tmp_dir=NULL,cov_file=NULL,tau
     }
   }
   
-  snplist = snpgdsSNPList(genofile)
-  af_inc = snpgdsSNPList(genofile, sample.id=samid)
+  #snplist = SNPRelate::snpgdsSNPList(genofile)
+  snplist = .gdsSNPList(gds)
+  #af_inc = SNPRelate::snpgdsSNPList(genofile, sample.id=samid)
+  af_inc = .gdsSNPList(gds, sample.id=samid)
   snplist = cbind(snplist,af_inc[,'afreq'])
   colnames(snplist)[ncol(snplist)] = 'afreq_inc'
   snplist = snplist[match(snp_ind,snplist[,1]),]
   sumstats = cbind(snplist,sumstats)
-  snpgdsClose(genofile)
-  file.remove(gds.fn)
+
   res = list(summary=sumstats,tau=tau_e,rank=rk_cor,nsam=n)
   return(res)
 }

@@ -4,8 +4,19 @@
 \alias{fit_ppl}
 \title{Estimate HRs using PPL given a known variance component (tau)}
 \usage{
-fit_ppl(X, outcome, corr, type, tau = 0.5, FID = NULL, eps = 1e-06,
-  order = 1, solver = NULL, spd = TRUE, verbose = TRUE)
+fit_ppl(
+  X,
+  outcome,
+  corr,
+  type,
+  tau = 0.5,
+  FID = NULL,
+  eps = 1e-06,
+  order = 1,
+  solver = NULL,
+  spd = TRUE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{X}{A matrix of the preidctors. Can be quantitative or binary values. Categorical variables need to be converted to dummy variables. Each row is a sample, and the predictors are columns.}
@@ -20,7 +31,7 @@ fit_ppl(X, outcome, corr, type, tau = 0.5, FID = NULL, eps = 1e-06,
 
 \item{FID}{An optional string vector of family ID. If provided, the data will be reordered according to the family ID.}
 
-\item{eps}{An optional positive value indicating the tolerance in the optimization algorithm. Default is 1e-6.}
+\item{eps}{An optional positive value indicating the relative convergence tolerance in the optimization algorithm. Default is 1e-6.}
 
 \item{order}{An optional integer value starting from 0. Only valid when dense=FALSE. It specifies the order of approximation used in the inexact newton method. Default is 1.}
 
