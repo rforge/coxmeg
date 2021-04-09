@@ -167,7 +167,6 @@ When the relatedness matrix is dense and large (>5000), ```type='dense'``` shoul
 
 ```{r,echo=TRUE,eval=FALSE}
 re = coxmeg_plink(pheno,sigma,type='dense',bed=bed,tmp_dir=tempdir(),cov_file=cov,detap='slq',verbose=FALSE,solver=2)
-re
 ```
 
 If ```solver``` is not specified, ```coxmeg_plink``` will by default choose PCG as a solver when ```type='dense'```. If ```detap``` is not specified, ```coxmeg_plink``` will by default use ```detap='slq'``` for a dense matrix when the sample size exceeds 3000. The number of Monte Carlo samples in the SLQ can be specified by ```mc``` (by default ```mc=100```).  
@@ -179,7 +178,7 @@ re = coxmeg_plink(pheno,sigma,type='dense',bed=bed,tmp_dir=tempdir(),tau=re$tau,
 re
 ```
 
-In the results, the column ```score_test``` is the score test statistics, which follow a chi-square distribution.
+In the results, the column ```score_test``` is the score test statistic, which follows a $\chi^2$ distribution with 1 d.f. The column ```score``` is the score function normalized by its variance.
 
 ## Handle positive semidefinite relatedness matrices
 

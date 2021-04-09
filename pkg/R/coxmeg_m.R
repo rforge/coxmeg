@@ -524,10 +524,11 @@ coxmeg_m <- function(X,outcome,corr,type,FID=NULL,cov=NULL,tau=NULL,min_tau=1e-0
     v = chol(v)
     v = chol2inv(v)
     t_st <- score_test(deriv,bw_v,w_v,rs$rs_rs-1,rs$rs_cs-1,rs$rs_cs_p-1,ind-1,a_v_p,a_v_2,tau_e,v,cov,as.matrix(X[,snpval]))
-    pv <- pchisq(t_st,1,lower.tail=FALSE)
+    pv <- pchisq(t_st[,2],1,lower.tail=FALSE)
     
-    sumstats <- data.frame(score_test=rep(NA,p),p=rep(NA,p))
-    sumstats$score_test[snpval]=t_st
+    sumstats <- data.frame(score=rep(NA,p),score_test=rep(NA,p),p=rep(NA,p))
+    sumstats$score[snpval]=t_st[,1]
+    sumstats$score_test[snpval]=t_st[,2]
     sumstats$p[snpval]=pv
   }
   res = list(summary=sumstats,tau=tau_e,rank=rk_cor,nsam=n)

@@ -591,7 +591,7 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,snp.id=NULL,maf=0.0
     v = chol(v)
     v = chol2inv(v)
     
-    sumstats <- data.frame(index=snp_ind,score_test=rep(NA,nsnp),p=rep(NA,nsnp))
+    sumstats <- data.frame(index=snp_ind,score=rep(NA,nsnp),score_test=rep(NA,nsnp),p=rep(NA,nsnp))
     
     for(bi in 1:nblock)
     {  
@@ -601,8 +601,9 @@ coxmeg_gds <- function(gds,pheno,corr,type,cov=NULL,tau=NULL,snp.id=NULL,maf=0.0
       #X = X$genotype
       
       t_st <- score_test(deriv,bw_v,w_v,rs$rs_rs-1,rs$rs_cs-1,rs$rs_cs_p-1,ind-1,a_v_p,a_v_2,tau_e,v,cov,X)
-      pv <- pchisq(t_st,1,lower.tail=FALSE)
-      sumstats$score_test[snp_t]=t_st
+      pv <- pchisq(t_st[,2],1,lower.tail=FALSE)
+      sumstats$score[snp_t]=t_st[,1]
+      sumstats$score_test[snp_t]=t_st[,2]
       sumstats$p[snp_t]=pv
     }
   }

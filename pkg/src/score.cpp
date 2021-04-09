@@ -87,7 +87,7 @@ Eigen::MatrixXd wma_cp(const Eigen::Map<Eigen::VectorXd> w, const Eigen::Map<Eig
 
 //
 // [[Rcpp::export]]
-Eigen::VectorXd score_test(const Eigen::Map<Eigen::VectorXd> deriv, const Eigen::Map<Eigen::VectorXd> bw_v,
+Eigen::MatrixXd score_test(const Eigen::Map<Eigen::VectorXd> deriv, const Eigen::Map<Eigen::VectorXd> bw_v,
                const Eigen::Map<Eigen::VectorXd> w, const Eigen::Map<Eigen::VectorXd> rs_rs,const Eigen::Map<Eigen::VectorXd> rs_cs,
                const Eigen::Map<Eigen::VectorXd> cs_p, const Eigen::MatrixXi & ind,
                const Eigen::Map<Eigen::VectorXd> a, const Eigen::Map<Eigen::VectorXd> a2, const Eigen::VectorXd & tau, 
@@ -101,7 +101,7 @@ Eigen::VectorXd score_test(const Eigen::Map<Eigen::VectorXd> deriv, const Eigen:
     }
     
     int ns = x.cols();  
-    Eigen::VectorXd tst(ns);
+    Eigen::MatrixXd tst(ns,2);
     for(int i=0; i<ns; i++)
     {
       Eigen::RowVectorXd xh = bw_v.array()*x.col(i).array() - csqei(w,x.col(i),rs_rs,rs_cs,ind,a2).col(0).array(); 
@@ -113,7 +113,8 @@ Eigen::VectorXd score_test(const Eigen::Map<Eigen::VectorXd> deriv, const Eigen:
       v21.tail(n) = xh;
       double sc_v = (xh*x.col(i) - v21*v*v21.transpose()).value();
       double deriv_x = x.col(i).transpose()*deriv;
-      tst(i) = deriv_x*deriv_x/sc_v;
+      tst(i,0) = deriv_x/sc_v;
+      tst(i,1) = deriv_x*deriv_x/sc_v;
     }
     
     return tst;

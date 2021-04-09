@@ -133,7 +133,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // score_test
-Eigen::VectorXd score_test(const Eigen::Map<Eigen::VectorXd> deriv, const Eigen::Map<Eigen::VectorXd> bw_v, const Eigen::Map<Eigen::VectorXd> w, const Eigen::Map<Eigen::VectorXd> rs_rs, const Eigen::Map<Eigen::VectorXd> rs_cs, const Eigen::Map<Eigen::VectorXd> cs_p, const Eigen::MatrixXi& ind, const Eigen::Map<Eigen::VectorXd> a, const Eigen::Map<Eigen::VectorXd> a2, const Eigen::VectorXd& tau, const Eigen::Map<Eigen::MatrixXd> v, const Eigen::MatrixXd& cov, const Eigen::MatrixXd& x);
+Eigen::MatrixXd score_test(const Eigen::Map<Eigen::VectorXd> deriv, const Eigen::Map<Eigen::VectorXd> bw_v, const Eigen::Map<Eigen::VectorXd> w, const Eigen::Map<Eigen::VectorXd> rs_rs, const Eigen::Map<Eigen::VectorXd> rs_cs, const Eigen::Map<Eigen::VectorXd> cs_p, const Eigen::MatrixXi& ind, const Eigen::Map<Eigen::VectorXd> a, const Eigen::Map<Eigen::VectorXd> a2, const Eigen::VectorXd& tau, const Eigen::Map<Eigen::MatrixXd> v, const Eigen::MatrixXd& cov, const Eigen::MatrixXd& x);
 RcppExport SEXP _coxmeg_score_test(SEXP derivSEXP, SEXP bw_vSEXP, SEXP wSEXP, SEXP rs_rsSEXP, SEXP rs_csSEXP, SEXP cs_pSEXP, SEXP indSEXP, SEXP aSEXP, SEXP a2SEXP, SEXP tauSEXP, SEXP vSEXP, SEXP covSEXP, SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

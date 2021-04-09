@@ -93,7 +93,6 @@ re
 
 ## ----echo=TRUE,eval=FALSE-----------------------------------------------------
 #  re = coxmeg_plink(pheno,sigma,type='dense',bed=bed,tmp_dir=tempdir(),cov_file=cov,detap='slq',verbose=FALSE,solver=2)
-#  re
 
 ## ----echo=TRUE----------------------------------------------------------------
 re = coxmeg_plink(pheno,sigma,type='dense',bed=bed,tmp_dir=tempdir(),tau=re$tau,cov_file=cov,detap='slq',verbose=FALSE,solver=2,score=TRUE)
